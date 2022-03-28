@@ -103,6 +103,23 @@ jobs:
           command: |
             pip3 install pyyaml
 
+      - run:
+          name: Checkout vsi_common
+          command: |
+
+            # checkout vsi_common
+            git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
+
+            # make room for blueprints
+            rm -rf "${BLUEPRINT_DIR}"
+
+      - checkout:
+          path: "${BLUEPRINT_DIR}"
+
+      - run:
+          name: find
+          command: find "${BLUEPRINT_DIR}"
+
       - checkout_in_vsi_common
       - setup_remote_docker
 
