@@ -11,21 +11,6 @@ orbs:
 # -----
 commands:
 
-  # checkout docker_blueprints within vsi_common:
-  # -- checkout vsi_common master
-  # -- checkout docker_blueprints within vsi_common
-  # -- allows use of "just" targets as needed (such as "just test blueprint")
-  checkout_in_vsi_common:
-    description: Checkout vsi_common
-    steps:
-      - run:
-          name: Checkout vsi_common
-          command: |
-            git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
-
-      - checkout:
-          path: "${BLUEPRINT_DIR}"
-
   # run "ci_load" command on user-selected docker-compose file
   # - cache is updated only from master branch of main repo (not forks)
   # - assumes python3 with pyyaml is already available
@@ -106,11 +91,7 @@ jobs:
       - run:
           name: Checkout vsi_common
           command: |
-
-            # checkout vsi_common
             git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
-
-            # make room for blueprints
             rm -rf "${BLUEPRINT_DIR}"
 
       - checkout:
@@ -120,7 +101,6 @@ jobs:
           name: find
           command: find "${BLUEPRINT_DIR}"
 
-      - checkout_in_vsi_common
       - setup_remote_docker
 
       - run:
