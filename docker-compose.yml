@@ -15,13 +15,13 @@ services:
       #   GDAL_VERSION: "${GDAL_VERSION}"
     image: vsiri/blueprints:gdal
 
-  pdal:
-    build:
-      context: .
-      dockerfile: blueprint_pdal.Dockerfile
-      # args:
-      #   LASZIP_VERSION: "${LASZIP_VERSION}"
-      #   LAZPERF_VERSION: "${LAZPERF_VERSION}"
-      #   NITRO_VERSION: "${NITRO_VERSION}"
-      #   PDAL_VERSION: "${PDAL_VERSION}"
-    image: vsiri/blueprints:pdal
+  # pdal:
+  #   build:
+  #     context: .
+  #     dockerfile: blueprint_pdal.Dockerfile
+  #     # args:
+  #     #   LASZIP_VERSION: "${LASZIP_VERSION}"
+  #     #   LAZPERF_VERSION: "${LAZPERF_VERSION}"
+  #     #   NITRO_VERSION: "${NITRO_VERSION}"
+  #     #   PDAL_VERSION: "${PDAL_VERSION}"
+  #   image: vsiri/blueprints:pdal

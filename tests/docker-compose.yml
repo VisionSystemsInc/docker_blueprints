@@ -6,21 +6,21 @@ services:
     build:
       context: ..
       dockerfile: blueprint_gdal.Dockerfile
-      cache_from:
-        - vsiri/blueprints:gdal
+      # cache_from:
+      #   - vsiri/blueprints:gdal
       args:
         GDAL_VERSION: "3.2.3"
     image: vsiri/blueprints:gdal-3.2.3
 
-  pdal_2_2_0:
-    build:
-      context: ..
-      dockerfile: blueprint_pdal.Dockerfile
-      cache_from:
-        - vsiri/blueprints:pdal
-      args:
-        PDAL_VERSION: "2.2.0"
-    image: vsiri/blueprints:pdal-2.2.0
+  # pdal_2_2_0:
+  #   build:
+  #     context: ..
+  #     dockerfile: blueprint_pdal.Dockerfile
+  #     cache_from:
+  #       - vsiri/blueprints:pdal
+  #     args:
+  #       PDAL_VERSION: "2.2.0"
+  #   image: vsiri/blueprints:pdal-2.2.0
 
   test_gdal:
     build:
@@ -28,8 +28,8 @@ services:
       dockerfile: test_gdal.Dockerfile
     image: vsiri/blueprints:test_gdal
 
-  test_pdal:
-    build:
-      context: .
-      dockerfile: test_pdal.Dockerfile
-    image: vsiri/blueprints:test_pdal
+  # test_pdal:
+  #   build:
+  #     context: .
+  #     dockerfile: test_pdal.Dockerfile
+  #   image: vsiri/blueprints:test_pdal
