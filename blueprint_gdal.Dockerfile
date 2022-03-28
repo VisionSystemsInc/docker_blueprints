@@ -123,14 +123,14 @@ RUN mkdir -p "${STAGING_DIR}/usr/local/lib"; \
 # https://gitlab.com/libtiff/libtiff
 FROM base_image as tiff
 
+# version argument
+ARG TIFF_VERSION=4.3.0
+
 # additional build dependencies
 RUN yum install -y \
       libjpeg-turbo-devel \
       zlib-devel; \
     yum clean all
-
-# version argument
-ARG TIFF_VERSION=4.3.0
 
 # install
 RUN \
@@ -157,6 +157,9 @@ RUN \
 # install instructions: https://proj.org/install.html
 FROM base_image as proj
 
+# version argument
+ARG PROJ_VERSION=8.1.1
+
 # additional build dependencies
 RUN yum install -y \
       libcurl-devel \
@@ -166,9 +169,6 @@ RUN yum install -y \
 
 # local dependencies to staging directory
 COPY --from=tiff ${STAGING_DIR}/usr/local /usr/local
-
-# version argument
-ARG PROJ_VERSION=8.1.1
 
 # install
 RUN \
@@ -197,6 +197,9 @@ RUN \
 # https://github.com/OSGeo/libgeotiff
 FROM base_image as geotiff
 
+# version argument
+ARG GEOTIFF_VERSION=1.7.0
+
 # additional build dependencies
 RUN yum install -y \
       libcurl-devel \
@@ -207,9 +210,6 @@ RUN yum install -y \
 # local dependencies to staging directory
 COPY --from=tiff ${STAGING_DIR}/usr/local /usr/local
 COPY --from=proj ${STAGING_DIR}/usr/local /usr/local
-
-# version argument
-ARG GEOTIFF_VERSION=1.7.0
 
 # install
 RUN mkdir -p "./source" "./build"; \
@@ -237,6 +237,9 @@ RUN mkdir -p "./source" "./build"; \
 # GDAL (final image)
 # -----------------------------------------------------------------------------
 FROM base_image
+
+# version argument
+ARG GDAL_VERSION=3.3.3
 
 # additional build dependencies
 RUN yum install -y \
@@ -267,9 +270,6 @@ ENV LD_LIBRARY_PATH="${STAGING_DIR}/usr/local/lib"
 ENV GDAL_PATCH_FILE=${STAGING_DIR}/usr/local/share/just/container_build_patch/30_gdal
 ADD 30_gdal ${GDAL_PATCH_FILE}
 RUN chmod +x ${GDAL_PATCH_FILE}
-
-# version argument
-ARG GDAL_VERSION=3.3.3
 
 # install
 RUN \
