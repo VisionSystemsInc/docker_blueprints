@@ -22,9 +22,13 @@ commands:
       - run:
           name: Checkout code in vsi_common
           command: |
+
             git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
-            cd "${VSI_COMMON_DIR}/docker/blueprints"
-            git checkout "${CIRCLE_SHA1}"
+            # cd "${VSI_COMMON_DIR}/docker/blueprints"
+            # git checkout "${CIRCLE_SHA1}"
+
+      - checkout:
+          path: "${BLUEPRINT_DIR}"
 
   # run "ci_load" command on user-selected docker-compose file
   # - cache is updated only from master branch of main repo (not forks)
