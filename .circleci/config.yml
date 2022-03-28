@@ -1,0 +1,135 @@
+version: 2.1
+
+# -----
+# CircleCI orbs
+# -----
+orbs:
+  win: circleci/windows@2.4.0
+
+# -----
+# CircleCI custom commands
+# -----
+commands:
+
+  # checkout docker_blueprints within vsi_common:
+  # -- checkout vsi_common master
+  # -- navigate to docker_blueprints submoduleand checkout current docker_blueprints SHA
+  # -- requires $VSI_COMMON_DIR to be defined
+  # -- allows use of "just" targets as needed (such as "just test blueprint")
+  checkout_in_vsi_common:
+    description: Checkout code in vsi_common
+    steps:
+      - run:
+          name: Checkout code in vsi_common
+          command: |
+            git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
+            cd "${VSI_COMMON_DIR}/docker/blueprints"
+            git checkout "${CIRCLE_SHA1}"
+
+  # run "ci_load" command on user-selected docker-compose file
+  # - cache is updated only from master branch of main repo (not forks)
+  # - assumes python3 with pyyaml is already available
+  # - assumes docker login was successful
+  # - required environment variables:
+  #     $VSI_COMMON_DIR - location of vsi_common repo
+  # - optional enviromment variables
+  #     $CI_BLUEPRINT_REPO - dockerhub repo for cache (default "vsiri/ci_cache_blueprint")
+  #     $CI_BLUEPRINT_VERSION - version string for cache (default "")
+  #     $JUST_CI_BRANCH_PUSH - branch (besides master) for dockerhub push
+  # - each service identified in the docker-compose file will be separately
+  #   built via "${VSI_COMMON_DIR}/linux/ci_load.py"
+  ci_load:
+    description: Build dockers (ci_load)
+    parameters:
+      step_name:
+        description: Step name
+        type: string
+        default: Build blueprints (ci_load)
+      compose_file:
+        description: docker-compose file
+        type: string
+    steps:
+      - run:
+          name: << parameters.step_name >>
+          command: |
+
+            set -x
+
+            # push from main repo, master or ${JUST_CI_BRANCH_PUSH} branches
+            CI_LOAD_OPTIONS="--no-push"
+            if [ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" ]; then
+               if [ "${CIRCLE_BRANCH}" == "master" ] || [ "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}" ]; then
+                 CI_LOAD_OPTIONS=""
+               fi
+            fi
+
+            # environment
+            : ${CI_RECIPE_REPO="vsiri/ci_cache_blueprint"}
+            : ${CI_RECIPE_VERSION=}
+            COMPOSE_FILE="<< parameters.compose_file >>"
+            SERVICES=( $(docker-compose -f "${COMPOSE_FILE}" config --services) ) # noquotes
+
+            # ci_load for each service
+            for SERVICE in "${SERVICES[@]}"; do
+
+              # run ci_load
+              python3 "${VSI_COMMON_DIR}/linux/ci_load.py" \
+                --recipe-repo "IGNORE" \
+                --cache-repo "${CI_BLUEPRINT_REPO}" \
+                ${CI_BLUEPRINT_VERSION:+ --cache-version "${CI_BLUEPRINT_VERSION}"} \
+                ${CI_LOAD_OPTIONS} \
+                "${COMPOSE_FILE}" "${SERVICE}"
+            done
+
+# -----
+# CircleCI jobs
+# -----
+jobs:
+
+  # linux docker environment
+  build_and_test:
+    docker:
+      - image: cimg/python:3.8
+    shell: /bin/bash -eo pipefail
+    working_directory: ~/vsi
+    environment:
+      VSI_COMMON_DIR: /home/circleci/vsi
+      BLUEPRINT_DIR: /home/circleci/vsi/docker/blueprints
+
+    steps:
+
+      - run:
+          name: Install software
+          command: |
+            pip3 install pyyaml
+
+      - checkout_in_vsi_common
+      - setup_remote_docker
+
+      - run:
+          name: Additional setup
+          command: |
+            docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
+
+      - ci_load:
+          step_name: Build blueprints (ci_load)
+          compose_file: ${BLUEPRINT_DIR}/docker-compose.yml
+
+      - ci_load:
+          step_name: Build tests (ci_load)
+          compose_file: ${BLUEPRINT_DIR}/tests/docker-compose.yml
+
+      # - run:
+      #     name: Run integration tests
+      #     command: |
+      #       source setup.env
+      #       just test blueprint
+
+
+# -----
+# CircleCI workflows
+# -----
+workflows:
+  recipes:
+    jobs:
+      - build_and_test
