@@ -6,8 +6,8 @@ services:
     build:
       context: ..
       dockerfile: blueprint_gdal.Dockerfile
-      # cache_from:
-      #   - vsiri/blueprints:gdal
+      cache_from:
+        - vsiri/blueprints:gdal
       args:
         GDAL_VERSION: "3.2.3"
     image: vsiri/blueprints:gdal-3.2.3
