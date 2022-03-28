@@ -114,7 +114,7 @@ jobs:
             rm -rf "${BLUEPRINT_DIR}"
 
       - checkout:
-          path: "${BLUEPRINT_DIR}"
+          path: "docker/blueprints"
 
       - run:
           name: find
