@@ -49,8 +49,8 @@ commands:
             fi
 
             # environment
-            : ${CI_RECIPE_REPO="vsiri/ci_cache_blueprint"}
-            : ${CI_RECIPE_VERSION=}
+            : ${CI_BLUEPRINT_REPO="vsiri/ci_cache_blueprints"}
+            : ${CI_BLUEPRINT_VERSION=}
             COMPOSE_FILE="<< parameters.compose_file >>"
             SERVICES=( $(docker-compose -f "${COMPOSE_FILE}" config --services) ) # noquotes
 
@@ -127,6 +127,6 @@ jobs:
 # CircleCI workflows
 # -----
 workflows:
-  recipes:
+  blueprints:
     jobs:
       - build_and_test
