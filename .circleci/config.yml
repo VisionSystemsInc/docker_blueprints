@@ -13,19 +13,15 @@ commands:
 
   # checkout docker_blueprints within vsi_common:
   # -- checkout vsi_common master
-  # -- navigate to docker_blueprints submoduleand checkout current docker_blueprints SHA
-  # -- requires $VSI_COMMON_DIR to be defined
+  # -- checkout docker_blueprints within vsi_common
   # -- allows use of "just" targets as needed (such as "just test blueprint")
   checkout_in_vsi_common:
-    description: Checkout code in vsi_common
+    description: Checkout vsi_common
     steps:
       - run:
-          name: Checkout code in vsi_common
+          name: Checkout vsi_common
           command: |
-
             git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
-            # cd "${VSI_COMMON_DIR}/docker/blueprints"
-            # git checkout "${CIRCLE_SHA1}"
 
       - checkout:
           path: "${BLUEPRINT_DIR}"

@@ -16,7 +16,7 @@ services:
       dockerfile: blueprint_pdal.Dockerfile
       args:
         PDAL_VERSION: "2.2.0"
-    image: vsiri/blueprints:gdal-2.2.0
+    image: vsiri/blueprints:pdal-2.2.0
 
   test_gdal:
     build:
