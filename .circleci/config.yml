@@ -62,6 +62,7 @@ commands:
                 --recipe-repo "IGNORE" \
                 --cache-repo "${CI_BLUEPRINT_REPO}" \
                 ${CI_BLUEPRINT_VERSION:+ --cache-version "${CI_BLUEPRINT_VERSION}"} \
+                --quiet-pull --quiet-push \
                 ${CI_LOAD_OPTIONS} \
                 "${COMPOSE_FILE}" "${SERVICE}"
             done
@@ -92,6 +93,7 @@ jobs:
           name: Checkout vsi_common
           command: |
             git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
+            git checkout ci_load_quiet
             rm -rf "${BLUEPRINT_DIR}"
 
       - checkout:
