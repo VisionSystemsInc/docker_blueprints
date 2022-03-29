@@ -164,7 +164,9 @@ jobs:
 # CircleCI workflows
 # -----
 workflows:
-  blueprints:
+  build_and_test:
     jobs:
       - build_blueprints
-      - build_tests
+      - build_tests:
+          requires:
+            - build_blueprints
