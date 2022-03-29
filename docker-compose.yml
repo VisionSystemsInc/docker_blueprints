@@ -14,6 +14,7 @@ services:
       #   PROJ_VERSION: "${PROJ_VERSION}"
       #   GEOTIFF_VERSION: "${GEOTIFF_VERSION}"
       #   GDAL_VERSION: "${GDAL_VERSION}"
+    x-no-push: 1
     image: vsiri/blueprint:gdal
 
   pdal:

@@ -39,25 +39,16 @@ commands:
 
             set -x
 
-            # push from main repo, master or ${JUST_CI_BRANCH_PUSH} branches
-            CI_LOAD_OPTIONS="--no-push"
-            if [ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" ]; then
-               if [ "${CIRCLE_BRANCH}" == "master" ] || [ "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}" ]; then
-                 CI_LOAD_OPTIONS=""
-               fi
-            fi
-
             # common variables
-            : ${CI_BLUEPRINT_VERSION=}
             COMPOSE_FILE="<< parameters.compose_file >>"
 
             # cache repos for tests vs. blueprints
             if [[ "${COMPOSE_FILE}" == */tests/* ]]; then
               CACHE_REPO="vsiri/ci_cache_blueprint_tests"
-              CACHE_REPO_ALT="vsiri/ci_cache_blueprints"
+              OTHER_REPOS="vsiri/ci_cache_blueprints"
             else
               CACHE_REPO="vsiri/ci_cache_blueprints"
-              CACHE_REPO_ALT=
+              OTHER_REPOS=
             fi
 
             # ci_load for each service
@@ -66,13 +57,9 @@ commands:
             for SERVICE in "${SERVICES[@]}"; do
               python3 "${VSI_COMMON_DIR}/linux/ci_load.py" \
                 --recipe-repo "IGNORE" \
-                ${CI_BLUEPRINT_VERSION:+ --cache-version "${CI_BLUEPRINT_VERSION}"} \
-                --cache-repo "${CACHE_REPO}" \
-                ${CACHE_REPO_ALT:+ --cache-repo-alt "${CACHE_REPO_ALT}"} \
-                --quiet-pull \
-                --print-build \
-                --print-push-pull \
-                ${CI_LOAD_OPTIONS} \
+                --cache-repo ${CACHE_REPO} \
+                ${OTHER_REPOS:+--other-repos ${OTHER_REPOS}} \
+                ${CI_LOAD_OPTIONS[*]} \
                 "${COMPOSE_FILE}" "${SERVICE}"
             done
 
@@ -94,39 +81,110 @@ jobs:
     steps:
 
       - run:
-          name: Install software
-          command: |
-            pip3 install pyyaml
-
-      - run:
           name: Checkout vsi_common
           command: |
             git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
-            git checkout cache_repos
+            git checkout ci_cache_from
             rm -rf "${BLUEPRINT_DIR}"
 
       - checkout:
           path: "docker/blueprints"
 
+      - run:
+          name: Setup
+          command: |
+
+            # install additional software
+            pip3 install pyyaml
+
+            # login to dockerhub
+            docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
+
+            # push from main repo, main or ${JUST_CI_BRANCH_PUSH} branches
+            CI_LOAD_PUSH_OPT="--no-push"
+            if [ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" ]; then
+               if [ "${CIRCLE_BRANCH}" == "main" ] || [ "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}" ]; then
+                 CI_LOAD_PUSH_OPT=""
+               fi
+            fi
+
+            # blueprint version
+            : ${CI_BLUEPRINT_VERSION=}
+
+            # common options
+            CI_LOAD_OPTIONS=(
+              ${CI_BLUEPRINT_VERSION:+--cache-version "${CI_BLUEPRINT_VERSION}"}
+              "--quiet-pull"
+              "--print-build"
+              "--print-push-pull"
+              ${CI_LOAD_PUSH_OPT:+${CI_LOAD_PUSH_OPT}}
+            )
+
+            # add common options to local environment
+            cat \<<EOF > local.env
+            CI_LOAD="python3 ${VSI_COMMON_DIR}/linux/ci_load.py"
+            CI_LOAD_OPTIONS=(
+                ${CI_BLUEPRINT_VERSION:+ --cache-version "${CI_BLUEPRINT_VERSION}"}
+                "--quiet-pull"
+                "--print-build"
+                "--print-push-pull"
+                ${CI_LOAD_PUSH_OPT:+${CI_LOAD_PUSH_OPT}}
+            )
+            EOF
+
+            # report local.env
+            cat local.env
+
       - setup_remote_docker
 
       - run:
-          name: Additional setup
+          name: Build blueprints (ci_load)
           command: |
-            docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
 
-      - ci_load:
-          step_name: Build blueprints (ci_load)
-          compose_file: ${BLUEPRINT_DIR}/docker-compose.yml
+            # activate just environment
+            source setup.env
+
+            # additional variables
+            COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
+            CACHE_REPO="vsiri/ci_cache_blueprints"
+
+            # discover services
+            SERVICES=( $(docker-compose -f "${BLUEPRINT_COMPOSE_FILE}" config --services) )
+
+            # ci_load for each blueprint
+            for service in "${SERVICES[@]}"; do
+              just --wrap ${CI_LOAD} \
+                --recipe-repo "IGNORE" \
+                --cache-repo "${CACHE_REPO}" \
+                ${CI_LOAD_OPTIONS[*]} \
+                "${COMPOSE_FILE}" "${service}"
+            done
 
       - run:
           name: List docker images
           command: |
             docker images | awk 'NR == 1; NR > 1 {print $0 | "sort -k2"}'
 
-      - ci_load:
-          step_name: Build tests (ci_load)
-          compose_file: ${BLUEPRINT_DIR}/tests/docker-compose.yml
+      # - run:
+      #     name: Build test blueprints (ci_load)
+      #     command: |
+
+      #       # activate just environment
+      #       source setup.env
+
+      #       # discover 
+
+
+      # - run:
+      #     name: Build test services (ci_load)
+      #     command: |
+
+      #       source setup.env
+
+
+      # - ci_load:
+      #     step_name: Build tests (ci_load)
+      #     compose_file: ${BLUEPRINT_DIR}/tests/docker-compose.yml
 
       # - run:
       #     name: Run integration tests
