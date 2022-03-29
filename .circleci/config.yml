@@ -130,6 +130,12 @@ jobs:
                 "--print-push-pull"
                 ${CI_LOAD_PUSH_OPT:+${CI_LOAD_PUSH_OPT}}
             )
+
+            BLUEPRINT_COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
+            BLUEPRINT_CACHE_REPO="vsiri/ci_cache_blueprints"
+
+            TEST_COMPOSE_FILE="${BLUEPRINT_DIR}/tests/docker-compose.yml"
+            TEST_CACHE_REPO="vsiri/ci_cache_blueprint_tests"
             EOF
 
             # report local.env
@@ -141,23 +147,19 @@ jobs:
           name: Build blueprints (ci_load)
           command: |
 
-            # activate just environment
-            source setup.env
-
-            # additional variables
-            COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
-            CACHE_REPO="vsiri/ci_cache_blueprints"
+            # source variables
+            source local.env
 
             # discover services
             SERVICES=( $(docker-compose -f "${BLUEPRINT_COMPOSE_FILE}" config --services) )
 
             # ci_load for each blueprint
             for service in "${SERVICES[@]}"; do
-              just --wrap ${CI_LOAD} \
+              ${CI_LOAD} \
                 --recipe-repo "IGNORE" \
-                --cache-repo "${CACHE_REPO}" \
+                --cache-repo "${BLUEPRINT_CACHE_REPO}" \
                 ${CI_LOAD_OPTIONS[*]} \
-                "${COMPOSE_FILE}" "${service}"
+                "${BLUEPRINT_COMPOSE_FILE}" "${service}"
             done
 
       - run:
