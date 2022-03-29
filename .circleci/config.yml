@@ -52,7 +52,7 @@ commands:
             COMPOSE_FILE="<< parameters.compose_file >>"
 
             # cache repos for tests vs. blueprints
-            if [[] "${COMPOSE_FILE}" == */tests/* ]; then
+            if [[ "${COMPOSE_FILE}" == */tests/* ]]; then
               CACHE_REPO="vsiri/ci_cache_blueprint_tests"
               CACHE_REPO_ALT="vsiri/ci_cache_blueprints"
             else
