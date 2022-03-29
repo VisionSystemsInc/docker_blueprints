@@ -1,12 +1,11 @@
 version: 2.1
 
 # -----
-# CircleCI jobs
+# Generic Build
 # -----
-jobs:
+x-references:
 
-  # linux docker environment
-  build_and_test:
+  build_config: &build_config
     docker:
       - image: cimg/python:3.8
     shell: /bin/bash -eo pipefail
@@ -15,60 +14,72 @@ jobs:
       VSI_COMMON_DIR: /home/circleci/vsi
       BLUEPRINT_DIR: /home/circleci/vsi/docker/blueprints
 
+  build_setup: &build_setup
+
+    - run:
+        name: Checkout vsi_common
+        command: |
+          git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
+          git checkout ci_cache_from
+          rm -rf "${BLUEPRINT_DIR}"
+
+    - checkout:
+        path: "docker/blueprints"
+
+    - run:
+        name: Setup
+        command: |
+
+          # install additional software
+          pip3 install pyyaml
+
+          # login to dockerhub
+          docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
+
+          # push from main repo, main or ${JUST_CI_BRANCH_PUSH} branches
+          CI_LOAD_PUSH_OPT="--no-push"
+          if [ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" ]; then
+              if [ "${CIRCLE_BRANCH}" == "main" ] || [ "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}" ]; then
+                CI_LOAD_PUSH_OPT=""
+              fi
+          fi
+
+          # permanently add common options to BASH_ENV
+          cat \<<EOF >> "${BASH_ENV}"
+
+          BLUEPRINT_VERSION=${CI_BLUEPRINT_VERSION-}
+
+          BLUEPRINT_COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
+          BLUEPRINT_CACHE_REPO="vsiri/ci_cache_blueprints"
+
+          TEST_COMPOSE_FILE="${BLUEPRINT_DIR}/tests/docker-compose.yml"
+          TEST_CACHE_REPO="vsiri/ci_cache_blueprint_tests"
+
+          CI_LOAD="python3 ${VSI_COMMON_DIR}/linux/ci_load.py"
+
+          CI_LOAD_OPTIONS=(
+              ${BLUEPRINT_VERSION:+ --cache-version "${BLUEPRINT_VERSION}"}
+              "--quiet-pull"
+              "--print-build"
+              "--print-push-pull"
+              ${CI_LOAD_PUSH_OPT:+${CI_LOAD_PUSH_OPT}}
+              "--recipe-repo IGNORE"
+          )
+          EOF
+
+    - setup_remote_docker
+
+
+# -----
+# CircleCI jobs
+# -----
+jobs:
+
+  build_blueprints:
+    <<: *build_config
+
     steps:
-
-      - run:
-          name: Checkout vsi_common
-          command: |
-            git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
-            git checkout ci_cache_from
-            rm -rf "${BLUEPRINT_DIR}"
-
-      - checkout:
-          path: "docker/blueprints"
-
-      - run:
-          name: Setup
-          command: |
-
-            # install additional software
-            pip3 install pyyaml
-
-            # login to dockerhub
-            docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
-
-            # push from main repo, main or ${JUST_CI_BRANCH_PUSH} branches
-            CI_LOAD_PUSH_OPT="--no-push"
-            if [ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" ]; then
-               if [ "${CIRCLE_BRANCH}" == "main" ] || [ "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}" ]; then
-                 CI_LOAD_PUSH_OPT=""
-               fi
-            fi
-
-            # permanently add common options to BASH_ENV
-            cat \<<EOF >> "${BASH_ENV}"
-
-            BLUEPRINT_VERSION=${CI_BLUEPRINT_VERSION-}
-
-            BLUEPRINT_COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
-            BLUEPRINT_CACHE_REPO="vsiri/ci_cache_blueprints"
-
-            TEST_COMPOSE_FILE="${BLUEPRINT_DIR}/tests/docker-compose.yml"
-            TEST_CACHE_REPO="vsiri/ci_cache_blueprint_tests"
-
-            CI_LOAD="python3 ${VSI_COMMON_DIR}/linux/ci_load.py"
-
-            CI_LOAD_OPTIONS=(
-                ${BLUEPRINT_VERSION:+ --cache-version "${BLUEPRINT_VERSION}"}
-                "--quiet-pull"
-                "--print-build"
-                "--print-push-pull"
-                ${CI_LOAD_PUSH_OPT:+${CI_LOAD_PUSH_OPT}}
-                "--recipe-repo IGNORE"
-            )
-            EOF
-
-      - setup_remote_docker
+      - *build_setup
 
       - run:
           name: Build blueprints (ci_load)
@@ -90,8 +101,15 @@ jobs:
           command: |
             docker images | awk 'NR == 1; NR > 1 {print $0 | "sort -k2"}'
 
+
+  build_tests:
+    <<: *build_config
+
+    steps:
+      - *build_setup
+
       - run:
-          name: Build test blueprints (ci_load)
+          name: Build tests (ci_load)
           command: |
 
             set -x
@@ -140,4 +158,5 @@ jobs:
 workflows:
   blueprints:
     jobs:
-      - build_and_test
+      - build_blueprints
+      - build_tests
