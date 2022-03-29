@@ -2,29 +2,18 @@ version: '2.3'
 
 services:
 
-  gdal_3_2_3:
+  gdal:
     build:
       context: ..
       dockerfile: blueprint_gdal.Dockerfile
-      # cache_from:
-        # - vsiri/blueprint:gdal
-        # - vsiri/ci_cache_blueprints:gdal_stage_base
-        # - vsiri/ci_cache_blueprints:gdal_stage_openjpeg
-        # - vsiri/ci_cache_blueprints:gdal_stage_ecw
-        # - vsiri/ci_cache_blueprints:gdal_stage_tiff
-        # - vsiri/ci_cache_blueprints:gdal_stage_proj
-        # - vsiri/ci_cache_blueprints:gdal_stage_geotiff
-        # - vsiri/ci_cache_blueprints:gdal_final
       args:
         GDAL_VERSION: "3.2.3"
     image: &gdal_image vsiri/blueprint_test:gdal-3.2.3
 
-  # pdal_2_2_0:
+  # pdal:
   #   build:
   #     context: ..
   #     dockerfile: blueprint_pdal.Dockerfile
-  #     cache_from:
-  #       - vsiri/blueprint:pdal
   #     args:
   #       GDAL_IMAGE: *gdal_image
   #       PDAL_VERSION: "2.2.0"

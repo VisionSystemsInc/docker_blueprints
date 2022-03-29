@@ -32,9 +32,6 @@ commands:
       compose_file:
         description: docker-compose file
         type: string
-      cache_repo:
-        description: dockerhub cache repo
-        type: string
     steps:
       - run:
           name: << parameters.step_name >>
@@ -50,25 +47,23 @@ commands:
                fi
             fi
 
-            # environment
+            # common variables
             : ${CI_BLUEPRINT_VERSION=}
             COMPOSE_FILE="<< parameters.compose_file >>"
-            CACHE_REPO="<< parameters.cache_repo >>"
-            SERVICES=( $(docker-compose -f "${COMPOSE_FILE}" config --services) ) # noquotes
+
+            # cache repos for tests vs. blueprints
+            if [[] "${COMPOSE_FILE}" == */tests/* ]; then
+              CACHE_REPO="vsiri/ci_cache_blueprint_tests"
+              CACHE_REPO_ALT="vsiri/ci_cache_blueprints"
+            else
+              CACHE_REPO="vsiri/ci_cache_blueprints"
+              CACHE_REPO_ALT=
+            fi
 
             # ci_load for each service
+            SERVICES=( $(docker-compose -f "${COMPOSE_FILE}" config --services) )
+
             for SERVICE in "${SERVICES[@]}"; do
-
-              # alternative cache repos
-              if [ "${SERVICE}" == "gdal_3_2_3" ] || \
-                 [ "${SERVICE}" == "pdal_2_2_0" ]
-              then
-                CACHE_REPO_ALT="vsiri/ci_cache_blueprints"
-              else
-                CACHE_REPO_ALT=
-              fi
-
-              # run ci_load
               python3 "${VSI_COMMON_DIR}/linux/ci_load.py" \
                 --recipe-repo "IGNORE" \
                 ${CI_BLUEPRINT_VERSION:+ --cache-version "${CI_BLUEPRINT_VERSION}"} \
@@ -123,7 +118,6 @@ jobs:
       - ci_load:
           step_name: Build blueprints (ci_load)
           compose_file: ${BLUEPRINT_DIR}/docker-compose.yml
-          cache_repo: "vsiri/ci_cache_blueprints"
 
       - run:
           name: List docker images
@@ -133,7 +127,6 @@ jobs:
       - ci_load:
           step_name: Build tests (ci_load)
           compose_file: ${BLUEPRINT_DIR}/tests/docker-compose.yml
-          cache_repo: "vsiri/ci_cache_blueprint_tests"
 
       # - run:
       #     name: Run integration tests
