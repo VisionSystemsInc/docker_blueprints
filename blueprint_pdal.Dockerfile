@@ -125,6 +125,9 @@ RUN \
 # -----------------------------------------------------------------------------
 FROM base as pdal
 
+# version argument
+ARG PDAL_VERSION=2.3.0
+
 # additional build dependencies
 RUN yum install -y \
       libcurl-devel \
@@ -148,9 +151,6 @@ RUN chmod +x ${PDAL_PATCH_FILE}
 # copy GDAL to /usr/local - GDAL will be copied into downstream dockers
 # independently, and should not be added to staging
 COPY --from=gdal /usr/local /usr/local
-
-# version argument
-ARG PDAL_VERSION=2.3.0
 
 # install
 RUN \
