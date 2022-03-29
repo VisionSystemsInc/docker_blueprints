@@ -101,7 +101,7 @@ jobs:
 
             # ci_load for each service
             for service in "${SERVICES[@]}"; do
-              blueprint="${1%%_*}"
+              blueprint="${service%%_*}"
               blueprint_cache="${BLUEPRINT_CACHE_REPO}:${BLUEPRINT_VERSION:+${BLUEPRINT_VERSION}_}${blueprint}"
 
               ${CI_LOAD} \
