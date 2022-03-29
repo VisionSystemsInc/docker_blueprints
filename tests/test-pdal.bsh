@@ -15,7 +15,7 @@ begin_test "PDAL"
 (
   setup_test
 
-  DOCKER_IMAGE="vsiri/blueprints:test_pdal"
+  DOCKER_IMAGE="vsiri/test_blueprint:test_pdal"
 
   # command line PDAL version
   RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'pdal info --version' | sed -n 2p)"

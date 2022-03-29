@@ -15,7 +15,7 @@ begin_test "GDAL"
 (
   setup_test
 
-  DOCKER_IMAGE="vsiri/blueprints:test_gdal"
+  DOCKER_IMAGE="vsiri/test_blueprint:test_gdal"
 
   # command line GDAL version
   RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'gdalinfo --version')"

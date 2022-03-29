@@ -7,21 +7,24 @@ services:
       context: .
       dockerfile: blueprint_gdal.Dockerfile
       # args:
+      #   BASE_IMAGE: "${BASE_IMAGE}"
       #   OPENJPEG_VERSION: "${OPENJPEG_VERSION}"
       #   ECW_VERSION: "${ECW_VERSION}"
       #   TIFF_VERSION: "${TIFF_VERSION}"
       #   PROJ_VERSION: "${PROJ_VERSION}"
       #   GEOTIFF_VERSION: "${GEOTIFF_VERSION}"
       #   GDAL_VERSION: "${GDAL_VERSION}"
-    image: vsiri/blueprints:gdal
+    image: vsiri/blueprint:gdal
 
-  # pdal:
-  #   build:
-  #     context: .
-  #     dockerfile: blueprint_pdal.Dockerfile
-  #     # args:
-  #     #   LASZIP_VERSION: "${LASZIP_VERSION}"
-  #     #   LAZPERF_VERSION: "${LAZPERF_VERSION}"
-  #     #   NITRO_VERSION: "${NITRO_VERSION}"
-  #     #   PDAL_VERSION: "${PDAL_VERSION}"
-  #   image: vsiri/blueprints:pdal
+  pdal:
+    build:
+      context: .
+      dockerfile: blueprint_pdal.Dockerfile
+      # args:
+      #   BASE_IMAGE: "${BASE_IMAGE}"
+      #   GDAL_IMAGE: "${GDAL_IMAGE}"
+      #   LASZIP_VERSION: "${LASZIP_VERSION}"
+      #   LAZPERF_VERSION: "${LAZPERF_VERSION}"
+      #   NITRO_VERSION: "${NITRO_VERSION}"
+      #   PDAL_VERSION: "${PDAL_VERSION}"
+    image: vsiri/blueprint:pdal

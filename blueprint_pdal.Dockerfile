@@ -19,11 +19,15 @@
 # BASE IMAGE
 # -----------------------------------------------------------------------------
 
+# global args
+ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2022-02-13-594988e"
+ARG GDAL_IMAGE="vsiri/blueprint:gdal"
+
 # blueprint dependencies
-FROM vsiri/blueprints:gdal as gdal
+FROM "${GDAL_IMAGE}" as gdal
 
 # base image
-FROM quay.io/pypa/manylinux2014_x86_64:2022-02-13-594988e as base_image
+FROM "${BASE_IMAGE}" as base
 
 # Set shell to bash
 SHELL ["/usr/bin/env", "/bin/bash", "-euxvc"]
@@ -40,7 +44,7 @@ WORKDIR /tmp
 # -----------------------------------------------------------------------------
 # LASZIP
 # -----------------------------------------------------------------------------
-FROM base_image as laszip
+FROM base as laszip
 
 # version argument
 ARG LASZIP_VERSION=3.4.3
@@ -66,7 +70,7 @@ RUN \
 # -----------------------------------------------------------------------------
 # LAZ-PERF
 # -----------------------------------------------------------------------------
-FROM base_image as lazperf
+FROM base as lazperf
 
 # version argument
 ARG LAZPERF_VERSION=2.1.0
@@ -93,7 +97,7 @@ RUN \
 # -----------------------------------------------------------------------------
 # NITRO NITF
 # -----------------------------------------------------------------------------
-FROM base_image as nitro
+FROM base as nitro
 
 # version argument
 ARG NITRO_VERSION=2.7dev-6
@@ -119,7 +123,7 @@ RUN \
 # -----------------------------------------------------------------------------
 # PDAL
 # -----------------------------------------------------------------------------
-FROM base_image as pdal
+FROM base as pdal
 
 # additional build dependencies
 RUN yum install -y \
@@ -130,7 +134,7 @@ RUN yum install -y \
     yum clean all
 
 # local dependencies to staging directory
-# the base_image has many other dependencies already in /usr/local,
+# the base has many other dependencies already in /usr/local,
 # so we isolate packages in a staging directory
 COPY --from=laszip ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=lazperf ${STAGING_DIR} ${STAGING_DIR}

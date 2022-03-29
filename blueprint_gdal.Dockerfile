@@ -24,8 +24,11 @@
 # BASE IMAGE
 # -----------------------------------------------------------------------------
 
+# global args
+ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2022-02-13-594988e"
+
 # base image
-FROM quay.io/pypa/manylinux2014_x86_64:2022-02-13-594988e as base_image
+FROM "${BASE_IMAGE}" as base
 
 # Set shell to bash
 SHELL ["/usr/bin/env", "/bin/bash", "-euxvc"]
@@ -41,7 +44,7 @@ WORKDIR /tmp
 # -----------------------------------------------------------------------------
 # OPENJPEG v2
 # -----------------------------------------------------------------------------
-FROM base_image as openjpeg
+FROM base as openjpeg
 
 # version argument
 ARG OPENJPEG_VERSION=2.4.0
@@ -69,7 +72,7 @@ RUN \
 # -----------------------------------------------------------------------------
 # ECW v5
 # -----------------------------------------------------------------------------
-FROM base_image as ecw
+FROM base as ecw
 
 # version argument
 ARG ECW_VERSION=5.5.0
@@ -121,7 +124,7 @@ RUN mkdir -p "${STAGING_DIR}/usr/local/lib"; \
 # LIBTIFF
 # -----------------------------------------------------------------------------
 # https://gitlab.com/libtiff/libtiff
-FROM base_image as tiff
+FROM base as tiff
 
 # version argument
 ARG TIFF_VERSION=4.3.0
@@ -155,7 +158,7 @@ RUN \
 # PROJ v6
 # -----------------------------------------------------------------------------
 # install instructions: https://proj.org/install.html
-FROM base_image as proj
+FROM base as proj
 
 # version argument
 ARG PROJ_VERSION=8.1.1
@@ -195,7 +198,7 @@ RUN \
 # GEOTIFF
 # -----------------------------------------------------------------------------
 # https://github.com/OSGeo/libgeotiff
-FROM base_image as geotiff
+FROM base as geotiff
 
 # version argument
 ARG GEOTIFF_VERSION=1.7.0
@@ -236,7 +239,7 @@ RUN mkdir -p "./source" "./build"; \
 # -----------------------------------------------------------------------------
 # GDAL (final image)
 # -----------------------------------------------------------------------------
-FROM base_image
+FROM base
 
 # version argument
 ARG GDAL_VERSION=3.3.3
@@ -249,7 +252,7 @@ RUN yum install -y \
     yum clean all
 
 # local dependencies to staging directory
-# the base_image has many other dependencies already in /usr/local,
+# the base has many other dependencies already in /usr/local,
 # so we isolate packages in a staging directory
 COPY --from=openjpeg ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=ecw ${STAGING_DIR} ${STAGING_DIR}
