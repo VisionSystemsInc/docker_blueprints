@@ -31,7 +31,7 @@ services:
     build:
       context: .
       dockerfile: test_pdal.Dockerfile
-    args:
-      GDAL_IMAGE: *gdal_image
-      PDAL_IMAGE: *pdal_image
+      args:
+        GDAL_IMAGE: *gdal_image
+        PDAL_IMAGE: *pdal_image
     image: vsiri/blueprint_test:test_pdal
