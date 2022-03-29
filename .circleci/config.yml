@@ -1,7 +1,8 @@
 version: 2.1
 
+
 # -----
-# Generic Build
+# generic yaml anchors
 # -----
 x-references:
 
@@ -14,60 +15,69 @@ x-references:
       VSI_COMMON_DIR: /home/circleci/vsi
       BLUEPRINT_DIR: /home/circleci/vsi/docker/blueprints
 
-  build_setup: &build_setup
 
-    - run:
-        name: Checkout vsi_common
-        command: |
-          git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
-          git checkout ci_cache_from
-          rm -rf "${BLUEPRINT_DIR}"
+# -----
+# circleci custom commands
+# -----
+commands:
 
-    - checkout:
-        path: "docker/blueprints"
+  # checkout submodules
+  build_setup:
+    description: Build setup
+    steps:
 
-    - run:
-        name: Setup
-        command: |
+      - run:
+          name: Checkout vsi_common
+          command: |
+            git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
+            git checkout ci_cache_from
+            rm -rf "${BLUEPRINT_DIR}"
 
-          # install additional software
-          pip3 install pyyaml
+      - checkout:
+          path: "docker/blueprints"
 
-          # login to dockerhub
-          docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
+      - run:
+          name: Setup
+          command: |
 
-          # push from main repo, main or ${JUST_CI_BRANCH_PUSH} branches
-          CI_LOAD_PUSH_OPT="--no-push"
-          if [ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" ]; then
-              if [ "${CIRCLE_BRANCH}" == "main" ] || [ "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}" ]; then
-                CI_LOAD_PUSH_OPT=""
-              fi
-          fi
+            # install additional software
+            pip3 install pyyaml
 
-          # permanently add common options to BASH_ENV
-          cat \<<EOF >> "${BASH_ENV}"
+            # login to dockerhub
+            docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
 
-          BLUEPRINT_VERSION=${CI_BLUEPRINT_VERSION-}
+            # push from main repo, main or ${JUST_CI_BRANCH_PUSH} branches
+            CI_LOAD_PUSH_OPT="--no-push"
+            if [ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" ]; then
+                if [ "${CIRCLE_BRANCH}" == "main" ] || [ "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}" ]; then
+                  CI_LOAD_PUSH_OPT=""
+                fi
+            fi
 
-          BLUEPRINT_COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
-          BLUEPRINT_CACHE_REPO="vsiri/ci_cache_blueprints"
+            # permanently add common options to BASH_ENV
+            cat \<<EOF >> "${BASH_ENV}"
 
-          TEST_COMPOSE_FILE="${BLUEPRINT_DIR}/tests/docker-compose.yml"
-          TEST_CACHE_REPO="vsiri/ci_cache_blueprint_tests"
+            BLUEPRINT_VERSION=${CI_BLUEPRINT_VERSION-}
 
-          CI_LOAD="python3 ${VSI_COMMON_DIR}/linux/ci_load.py"
+            BLUEPRINT_COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
+            BLUEPRINT_CACHE_REPO="vsiri/ci_cache_blueprints"
 
-          CI_LOAD_OPTIONS=(
-              ${BLUEPRINT_VERSION:+ --cache-version "${BLUEPRINT_VERSION}"}
-              "--quiet-pull"
-              "--print-build"
-              "--print-push-pull"
-              ${CI_LOAD_PUSH_OPT:+${CI_LOAD_PUSH_OPT}}
-              "--recipe-repo IGNORE"
-          )
-          EOF
+            TEST_COMPOSE_FILE="${BLUEPRINT_DIR}/tests/docker-compose.yml"
+            TEST_CACHE_REPO="vsiri/ci_cache_blueprint_tests"
 
-    - setup_remote_docker
+            CI_LOAD="python3 ${VSI_COMMON_DIR}/linux/ci_load.py"
+
+            CI_LOAD_OPTIONS=(
+                ${BLUEPRINT_VERSION:+ --cache-version "${BLUEPRINT_VERSION}"}
+                "--quiet-pull"
+                "--print-build"
+                "--print-push-pull"
+                ${CI_LOAD_PUSH_OPT:+${CI_LOAD_PUSH_OPT}}
+                "--recipe-repo IGNORE"
+            )
+            EOF
+
+      - setup_remote_docker
 
 
 # -----
@@ -77,9 +87,8 @@ jobs:
 
   build_blueprints:
     <<: *build_config
-
     steps:
-      - *build_setup
+      - build_setup
 
       - run:
           name: Build blueprints (ci_load)
@@ -104,9 +113,8 @@ jobs:
 
   build_tests:
     <<: *build_config
-
     steps:
-      - *build_setup
+      - build_setup
 
       - run:
           name: Build tests (ci_load)
