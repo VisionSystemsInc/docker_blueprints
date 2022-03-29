@@ -24,10 +24,10 @@ ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2022-02-13-594988e"
 ARG GDAL_IMAGE="vsiri/blueprint:gdal"
 
 # blueprint dependencies
-FROM "${GDAL_IMAGE}" as gdal
+FROM ${GDAL_IMAGE} as gdal
 
 # base image
-FROM "${BASE_IMAGE}" as base
+FROM ${BASE_IMAGE} as base
 
 # Set shell to bash
 SHELL ["/usr/bin/env", "/bin/bash", "-euxvc"]
