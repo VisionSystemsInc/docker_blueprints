@@ -108,38 +108,28 @@ jobs:
                fi
             fi
 
-            # blueprint version
-            : ${CI_BLUEPRINT_VERSION=}
+            # permanently add common options to BASH_ENV
+            cat \<<EOF >> "${BASH_ENV}"
 
-            # common options
-            CI_LOAD_OPTIONS=(
-              ${CI_BLUEPRINT_VERSION:+--cache-version "${CI_BLUEPRINT_VERSION}"}
-              "--quiet-pull"
-              "--print-build"
-              "--print-push-pull"
-              ${CI_LOAD_PUSH_OPT:+${CI_LOAD_PUSH_OPT}}
-            )
-
-            # add common options to local environment
-            cat \<<EOF > local.env
-            CI_LOAD="python3 ${VSI_COMMON_DIR}/linux/ci_load.py"
-            CI_LOAD_OPTIONS=(
-                ${CI_BLUEPRINT_VERSION:+ --cache-version "${CI_BLUEPRINT_VERSION}"}
-                "--quiet-pull"
-                "--print-build"
-                "--print-push-pull"
-                ${CI_LOAD_PUSH_OPT:+${CI_LOAD_PUSH_OPT}}
-            )
+            BLUEPRINT_VERSION=${CI_BLUEPRINT_VERSION-}
 
             BLUEPRINT_COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
             BLUEPRINT_CACHE_REPO="vsiri/ci_cache_blueprints"
 
             TEST_COMPOSE_FILE="${BLUEPRINT_DIR}/tests/docker-compose.yml"
             TEST_CACHE_REPO="vsiri/ci_cache_blueprint_tests"
-            EOF
 
-            # report local.env
-            cat local.env
+            CI_LOAD="python3 ${VSI_COMMON_DIR}/linux/ci_load.py"
+
+            CI_LOAD_OPTIONS=(
+                ${BLUEPRINT_VERSION:+ --cache-version "${BLUEPRINT_VERSION}"}
+                "--quiet-pull"
+                "--print-build"
+                "--print-push-pull"
+                ${CI_LOAD_PUSH_OPT:+${CI_LOAD_PUSH_OPT}}
+                "--recipe-repo IGNORE"
+            )
+            EOF
 
       - setup_remote_docker
 
@@ -147,16 +137,12 @@ jobs:
           name: Build blueprints (ci_load)
           command: |
 
-            # source variables
-            source local.env
-
             # discover services
             SERVICES=( $(docker-compose -f "${BLUEPRINT_COMPOSE_FILE}" config --services) )
 
             # ci_load for each blueprint
             for service in "${SERVICES[@]}"; do
               ${CI_LOAD} \
-                --recipe-repo "IGNORE" \
                 --cache-repo "${BLUEPRINT_CACHE_REPO}" \
                 ${CI_LOAD_OPTIONS[*]} \
                 "${BLUEPRINT_COMPOSE_FILE}" "${service}"
@@ -167,14 +153,24 @@ jobs:
           command: |
             docker images | awk 'NR == 1; NR > 1 {print $0 | "sort -k2"}'
 
-      # - run:
-      #     name: Build test blueprints (ci_load)
-      #     command: |
+      - run:
+          name: Build test blueprints (ci_load)
+          command: |
 
-      #       # activate just environment
-      #       source setup.env
+            # build a service against blueprint
+            function _ci_load() {
+              local service="$1"
+              local blueprint_cache="${BLUEPRINT_CACHE_REPO}:${BLUEPRINT_VERSION:+${BLUEPRINT_VERSION}_}$2"
 
-      #       # discover 
+              ${CI_LOAD} \
+                --cache-repo "${TEST_CACHE_REPO}" \
+                --other-repos "${blueprint_cache}" \
+                ${CI_LOAD_OPTIONS[*]} \
+                "${TEST_COMPOSE_FILE}" "${service}"
+            }
+
+            # build blueprints
+            _ci_load gdal-for-test gdal
 
 
       # - run:
