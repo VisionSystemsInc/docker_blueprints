@@ -63,7 +63,7 @@ commands:
                 --cache-repo "${CI_BLUEPRINT_REPO}" \
                 ${CI_BLUEPRINT_VERSION:+ --cache-version "${CI_BLUEPRINT_VERSION}"} \
                 --quiet-pull \
-                --print-push-pull-file \
+                --print-build-config \
                 ${CI_LOAD_OPTIONS} \
                 "${COMPOSE_FILE}" "${SERVICE}"
             done
