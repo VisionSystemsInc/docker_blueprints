@@ -113,9 +113,9 @@ jobs:
           command: |
             docker images | awk 'NR == 1; NR > 1 {print $0 | "sort -k2"}'
 
-      # - ci_load:
-      #     step_name: Build tests (ci_load)
-      #     compose_file: ${BLUEPRINT_DIR}/tests/docker-compose.yml
+      - ci_load:
+          step_name: Build tests (ci_load)
+          compose_file: ${BLUEPRINT_DIR}/tests/docker-compose.yml
 
       # - run:
       #     name: Run integration tests
