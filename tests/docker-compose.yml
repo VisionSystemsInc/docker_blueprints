@@ -6,7 +6,7 @@ services:
     build:
       context: ..
       dockerfile: blueprint_gdal.Dockerfile
-      cache_from:
+      # cache_from:
         # - vsiri/blueprint:gdal
         # - vsiri/ci_cache_blueprints:gdal_stage_base
         # - vsiri/ci_cache_blueprints:gdal_stage_openjpeg
