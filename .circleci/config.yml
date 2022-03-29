@@ -157,10 +157,13 @@ jobs:
           name: Build test blueprints (ci_load)
           command: |
 
+            set -x
+
             # build a service against blueprint
             function _ci_load() {
               local service="$1"
-              local blueprint_cache="${BLUEPRINT_CACHE_REPO}:${BLUEPRINT_VERSION:+${BLUEPRINT_VERSION}_}$2"
+              local blueprint="${2:-$1}"
+              local blueprint_cache="${BLUEPRINT_CACHE_REPO}:${BLUEPRINT_VERSION:+${BLUEPRINT_VERSION}_}${blueprint}"
 
               ${CI_LOAD} \
                 --cache-repo "${TEST_CACHE_REPO}" \
