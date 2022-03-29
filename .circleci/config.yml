@@ -111,7 +111,7 @@ jobs:
       - run:
           name: List docker images
           command: |
-            docker images
+            docker images | awk 'NR == 1; NR > 1 {print $0 | "sort -k2"}'
 
       # - ci_load:
       #     step_name: Build tests (ci_load)
