@@ -19,19 +19,19 @@ services:
         PDAL_VERSION: "2.2.0"
     image: &pdal_image vsiri/blueprint_test:pdal-2.2.0
 
-  # test_gdal:
-  #   build:
-  #     context: .
-  #     dockerfile: test_gdal.Dockerfile
-  #     args:
-  #       GDAL_IMAGE: *gdal_image
-  #   image: vsiri/blueprint_test:test_gdal
+  test_gdal:
+    build:
+      context: .
+      dockerfile: test_gdal.Dockerfile
+      args:
+        GDAL_IMAGE: *gdal_image
+    image: vsiri/blueprint_test:test_gdal
 
-  # test_pdal:
-  #   build:
-  #     context: .
-  #     dockerfile: test_pdal.Dockerfile
-  #   args:
-  #     GDAL_IMAGE: *gdal_image
-  #     PDAL_IMAGE: *pdal_image
-  #   image: vsiri/blueprint_test:test_pdal
+  test_pdal:
+    build:
+      context: .
+      dockerfile: test_pdal.Dockerfile
+    args:
+      GDAL_IMAGE: *gdal_image
+      PDAL_IMAGE: *pdal_image
+    image: vsiri/blueprint_test:test_pdal

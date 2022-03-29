@@ -30,7 +30,7 @@ commands:
           name: Checkout vsi_common
           command: |
             git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
-            git checkout ci_cache_from
+            git checkout ci_other_repos
             rm -rf "${BLUEPRINT_DIR}"
 
       - checkout:
@@ -120,7 +120,7 @@ jobs:
       - build_setup
 
       - run:
-          name: Build tests (ci_load)
+          name: Build test blueprints (ci_load)
           command: |
 
             set -x
