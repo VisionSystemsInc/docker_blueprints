@@ -108,6 +108,11 @@ jobs:
           step_name: Build blueprints (ci_load)
           compose_file: ${BLUEPRINT_DIR}/docker-compose.yml
 
+      - run:
+          name: List docker images
+          command: |
+            docker images
+
       # - ci_load:
       #     step_name: Build tests (ci_load)
       #     compose_file: ${BLUEPRINT_DIR}/tests/docker-compose.yml
