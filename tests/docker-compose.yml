@@ -17,7 +17,7 @@ services:
         # - vsiri/ci_cache_blueprints:gdal_final
       args:
         GDAL_VERSION: "3.2.3"
-    image: &gdal_image vsiri/test_blueprint:gdal-3.2.3
+    image: &gdal_image vsiri/blueprint_test:gdal-3.2.3
 
   # pdal_2_2_0:
   #   build:
@@ -28,7 +28,7 @@ services:
   #     args:
   #       GDAL_IMAGE: *gdal_image
   #       PDAL_VERSION: "2.2.0"
-  #   image: &pdal_image vsiri/test_blueprint:pdal-2.2.0
+  #   image: &pdal_image vsiri/blueprint_test:pdal-2.2.0
 
   # test_gdal:
   #   build:
@@ -36,7 +36,7 @@ services:
   #     dockerfile: test_gdal.Dockerfile
   #     args:
   #       GDAL_IMAGE: *gdal_image
-  #   image: vsiri/test_blueprint:test_gdal
+  #   image: vsiri/blueprint_test:test_gdal
 
   # test_pdal:
   #   build:
@@ -45,4 +45,4 @@ services:
   #   args:
   #     GDAL_IMAGE: *gdal_image
   #     PDAL_IMAGE: *pdal_image
-  #   image: vsiri/test_blueprint:test_pdal
+  #   image: vsiri/blueprint_test:test_pdal

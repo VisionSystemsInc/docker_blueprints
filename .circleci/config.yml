@@ -59,11 +59,21 @@ commands:
             # ci_load for each service
             for SERVICE in "${SERVICES[@]}"; do
 
+              # alternative cache repos
+              if [ "${SERVICE}" == "gdal_3_2_3" ] || \
+                 [ "${SERVICE}" == "pdal_2_2_0" ]
+              then
+                CACHE_REPO_ALT="vsiri/ci_cache_blueprints"
+              else
+                CACHE_REPO_ALT=
+              fi
+
               # run ci_load
               python3 "${VSI_COMMON_DIR}/linux/ci_load.py" \
                 --recipe-repo "IGNORE" \
-                --cache-repo "${CACHE_REPO}" \
                 ${CI_BLUEPRINT_VERSION:+ --cache-version "${CI_BLUEPRINT_VERSION}"} \
+                --cache-repo "${CACHE_REPO}" \
+                ${CACHE_REPO_ALT:+ --cache-repo-alt "${CACHE_REPO_ALT}"} \
                 --quiet-pull \
                 --print-build \
                 --print-push-pull \
@@ -97,7 +107,7 @@ jobs:
           name: Checkout vsi_common
           command: |
             git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
-            git checkout ci_load_quiet
+            git checkout cache_repos
             rm -rf "${BLUEPRINT_DIR}"
 
       - checkout:
