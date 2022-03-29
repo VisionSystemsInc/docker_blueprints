@@ -1,69 +1,6 @@
 version: 2.1
 
 # -----
-# CircleCI orbs
-# -----
-orbs:
-  win: circleci/windows@2.4.0
-
-# -----
-# CircleCI custom commands
-# -----
-commands:
-
-  # run "ci_load" command on user-selected docker-compose file
-  # - cache is updated only from master branch of main repo (not forks)
-  # - assumes python3 with pyyaml is already available
-  # - assumes docker login was successful
-  # - required environment variables:
-  #     $VSI_COMMON_DIR - location of vsi_common repo
-  # - optional enviromment variables
-  #     $CI_BLUEPRINT_VERSION - version string for cache (default "")
-  #     $JUST_CI_BRANCH_PUSH - branch (besides master) for dockerhub push
-  # - each service identified in the docker-compose file will be separately
-  #   built via "${VSI_COMMON_DIR}/linux/ci_load.py"
-  ci_load:
-    description: Build dockers (ci_load)
-    parameters:
-      step_name:
-        description: Step name
-        type: string
-        default: Build blueprints (ci_load)
-      compose_file:
-        description: docker-compose file
-        type: string
-    steps:
-      - run:
-          name: << parameters.step_name >>
-          command: |
-
-            set -x
-
-            # common variables
-            COMPOSE_FILE="<< parameters.compose_file >>"
-
-            # cache repos for tests vs. blueprints
-            if [[ "${COMPOSE_FILE}" == */tests/* ]]; then
-              CACHE_REPO="vsiri/ci_cache_blueprint_tests"
-              OTHER_REPOS="vsiri/ci_cache_blueprints"
-            else
-              CACHE_REPO="vsiri/ci_cache_blueprints"
-              OTHER_REPOS=
-            fi
-
-            # ci_load for each service
-            SERVICES=( $(docker-compose -f "${COMPOSE_FILE}" config --services) )
-
-            for SERVICE in "${SERVICES[@]}"; do
-              python3 "${VSI_COMMON_DIR}/linux/ci_load.py" \
-                --recipe-repo "IGNORE" \
-                --cache-repo ${CACHE_REPO} \
-                ${OTHER_REPOS:+--other-repos ${OTHER_REPOS}} \
-                ${CI_LOAD_OPTIONS[*]} \
-                "${COMPOSE_FILE}" "${SERVICE}"
-            done
-
-# -----
 # CircleCI jobs
 # -----
 jobs:
@@ -159,40 +96,42 @@ jobs:
 
             set -x
 
-            # build a service against blueprint
-            function _ci_load() {
-              local service="$1"
-              local blueprint="${2:-$1}"
-              local blueprint_cache="${BLUEPRINT_CACHE_REPO}:${BLUEPRINT_VERSION:+${BLUEPRINT_VERSION}_}${blueprint}"
+            # named services
+            SERVICES=( gdal_3_2_3 pdal_2_2_0 )
+
+            # ci_load for each service
+            for service in "${SERVICES[@]}"; do
+              blueprint="${1%%_*}"
+              blueprint_cache="${BLUEPRINT_CACHE_REPO}:${BLUEPRINT_VERSION:+${BLUEPRINT_VERSION}_}${blueprint}"
 
               ${CI_LOAD} \
                 --cache-repo "${TEST_CACHE_REPO}" \
                 --other-repos "${blueprint_cache}" \
                 ${CI_LOAD_OPTIONS[*]} \
                 "${TEST_COMPOSE_FILE}" "${service}"
-            }
+            done
 
-            # build blueprints
-            _ci_load gdal-for-test gdal
+      - run:
+          name: Build test services (ci_load)
+          command: |
 
+            # named services
+            SERVICES=( test_gdal test_pdal )
 
-      # - run:
-      #     name: Build test services (ci_load)
-      #     command: |
+            # ci_load for each service
+            for service in "${SERVICES[@]}"; do
+              ${CI_LOAD} \
+                --cache-repo "${TEST_CACHE_REPO}" \
+                ${CI_LOAD_OPTIONS[*]} \
+                "${TEST_COMPOSE_FILE}" "${service}"
+            done
 
-      #       source setup.env
-
-
-      # - ci_load:
-      #     step_name: Build tests (ci_load)
-      #     compose_file: ${BLUEPRINT_DIR}/tests/docker-compose.yml
-
-      # - run:
-      #     name: Run integration tests
-      #     command: |
-      #       source setup.env
-      #       # just test blueprint
-      #       TESTLIB_DISCOVERY_DIR="${BLUEPRINT_DIR}" vsi_test_env "${VSI_COMMON_DIR}/tests/run_tests"
+      - run:
+          name: Run integration tests
+          command: |
+            source setup.env
+            # just test blueprint
+            TESTLIB_DISCOVERY_DIR="${BLUEPRINT_DIR}" vsi_test_env "${VSI_COMMON_DIR}/tests/run_tests"
 
 
 # -----
