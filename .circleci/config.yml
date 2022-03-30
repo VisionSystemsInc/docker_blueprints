@@ -52,9 +52,10 @@ commands:
             docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
 
             # push from main repo, main or ${JUST_CI_BRANCH_PUSH} branches
+            CI_PUSH_OPT="--no-push"
             if [ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" ]; then
                 if [ "${CIRCLE_BRANCH}" == "main" ] || [ "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}" ]; then
-                  CI_LOAD_NO_PUSH=true
+                  CI_PUSH_OPT=
                 fi
             fi
 
@@ -78,7 +79,7 @@ commands:
                 "--quiet-pull"
                 "--print-build"
                 "--print-push-pull"
-                ${CI_LOAD_NO_PUSH:+ --no-push}
+                "${CI_PUSH_OPT}"
                 "--recipe-repo IGNORE"
             )
 
