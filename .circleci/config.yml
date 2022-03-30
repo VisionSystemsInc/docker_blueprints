@@ -1,5 +1,10 @@
 version: 2.1
 
+# Optional enviromment variables:
+# $CI_BLUEPRINT_REPO - dockerhub repo for blueprint cache (default "vsiri/ci_cache_blueprints")
+# $CI_BLUEPRINT_TEST_REPO - dockerhub repo for blueprint test cache (default "vsiri/ci_cache_blueprint_tests")
+# $CI_BLUEPRINT_VERSION - version string for blueprint cache (default "")
+# $JUST_CI_BRANCH_PUSH - branch (besides master) for dockerhub push
 
 # -----
 # generic yaml anchors
@@ -30,7 +35,7 @@ commands:
           name: Checkout vsi_common
           command: |
             git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
-            git checkout ci_other_repos
+            # git checkout ci_other_repos
             rm -rf "${BLUEPRINT_DIR}"
 
       - checkout:
@@ -47,35 +52,41 @@ commands:
             docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
 
             # push from main repo, main or ${JUST_CI_BRANCH_PUSH} branches
-            CI_LOAD_PUSH_OPT="--no-push"
             if [ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" ]; then
                 if [ "${CIRCLE_BRANCH}" == "main" ] || [ "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}" ]; then
-                  CI_LOAD_PUSH_OPT=""
+                  CI_LOAD_NO_PUSH=true
                 fi
             fi
 
+            # ----------
             # permanently add common options to BASH_ENV
             cat \<<EOF >> "${BASH_ENV}"
 
-            BLUEPRINT_VERSION=${CI_BLUEPRINT_VERSION-}
+            # these parameters can be overridden by project-level environment variables
+            : ${CI_BLUEPRINT_REPO="vsiri/ci_cache_blueprints"}
+            : ${CI_BLUEPRINT_TEST_REPO="vsiri/ci_cache_blueprint_tests"}
+            : ${CI_BLUEPRINT_VERSION=""}
+            : ${JUST_CI_BRANCH_PUSH=}
 
+            # compose file locations
             BLUEPRINT_COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
-            BLUEPRINT_CACHE_REPO="vsiri/ci_cache_blueprints"
+            BLUEPRINT_TEST_COMPOSE_FILE="${BLUEPRINT_DIR}/tests/docker-compose.yml"
 
-            TEST_COMPOSE_FILE="${BLUEPRINT_DIR}/tests/docker-compose.yml"
-            TEST_CACHE_REPO="vsiri/ci_cache_blueprint_tests"
-
-            CI_LOAD="python3 ${VSI_COMMON_DIR}/linux/ci_load.py"
-
+            # ci_load options
             CI_LOAD_OPTIONS=(
-                ${BLUEPRINT_VERSION:+ --cache-version "${BLUEPRINT_VERSION}"}
+                ${CI_BLUEPRINT_VERSION:+ --cache-version "${CI_BLUEPRINT_VERSION}"}
                 "--quiet-pull"
                 "--print-build"
                 "--print-push-pull"
-                ${CI_LOAD_PUSH_OPT:+${CI_LOAD_PUSH_OPT}}
+                ${CI_LOAD_NO_PUSH:+ --no-push}
                 "--recipe-repo IGNORE"
             )
+
+            # ci_load command
+            CI_LOAD="python3 ${VSI_COMMON_DIR}/linux/ci_load.py"
+
             EOF
+            # ----------
 
             # display bash_env
             cat "${BASH_ENV}"
@@ -97,13 +108,13 @@ jobs:
           name: Build blueprints (ci_load)
           command: |
 
-            # discover services
+            # discover blueprints
             SERVICES=( $(docker-compose -f "${BLUEPRINT_COMPOSE_FILE}" config --services) )
 
             # ci_load for each blueprint
             for service in "${SERVICES[@]}"; do
               ${CI_LOAD} \
-                --cache-repo "${BLUEPRINT_CACHE_REPO}" \
+                --cache-repo "${CI_BLUEPRINT_REPO}" \
                 ${CI_LOAD_OPTIONS[*]} \
                 "${BLUEPRINT_COMPOSE_FILE}" "${service}"
             done
@@ -123,22 +134,30 @@ jobs:
           name: Build test blueprints (ci_load)
           command: |
 
-            set -x
-
             # named services
-            SERVICES=( gdal_3_2_3 pdal_2_2_0 )
+            SERVICES=( gdal pdal )
 
-            # ci_load for each service
-            for service in "${SERVICES[@]}"; do
-              blueprint="${service%%_*}"
-              blueprint_cache="${BLUEPRINT_CACHE_REPO}:${BLUEPRINT_VERSION:+${BLUEPRINT_VERSION}_}${blueprint}"
+            # TEMPORARY - warm cache from existing
+            ${CI_LOAD} \
+              --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
+              --other-repos "${CI_BLUEPRINT_REPO}:gdal_3_2_3" \
+              ${CI_LOAD_OPTIONS[*]} \
+              "${BLUEPRINT_TEST_COMPOSE_FILE}" gdal
 
-              ${CI_LOAD} \
-                --cache-repo "${TEST_CACHE_REPO}" \
-                --other-repos "${blueprint_cache}" \
-                ${CI_LOAD_OPTIONS[*]} \
-                "${TEST_COMPOSE_FILE}" "${service}"
-            done
+            ${CI_LOAD} \
+              --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
+              --other-repos "${CI_BLUEPRINT_REPO}:pdal_2_2_0" \
+              ${CI_LOAD_OPTIONS[*]} \
+              "${BLUEPRINT_TEST_COMPOSE_FILE}" pdal
+
+            # # ci_load for each service, including default blueprint cache
+            # for service in "${SERVICES[@]}"; do
+            #   ${CI_LOAD} \
+            #     --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
+            #     --other-repos "${CI_BLUEPRINT_REPO}" \
+            #     ${CI_LOAD_OPTIONS[*]} \
+            #     "${BLUEPRINT_TEST_COMPOSE_FILE}" "${service}"
+            # done
 
       - run:
           name: Build test services (ci_load)
@@ -150,17 +169,17 @@ jobs:
             # ci_load for each service
             for service in "${SERVICES[@]}"; do
               ${CI_LOAD} \
-                --cache-repo "${TEST_CACHE_REPO}" \
+                --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
                 ${CI_LOAD_OPTIONS[*]} \
-                "${TEST_COMPOSE_FILE}" "${service}"
+                "${BLUEPRINT_TEST_COMPOSE_FILE}" "${service}"
             done
 
-      - run:
-          name: Run integration tests
-          command: |
-            source setup.env
-            # just test blueprint
-            TESTLIB_DISCOVERY_DIR="${BLUEPRINT_DIR}" vsi_test_env "${VSI_COMMON_DIR}/tests/run_tests"
+      # - run:
+      #     name: Run integration tests
+      #     command: |
+      #       source setup.env
+      #       # just test blueprint
+      #       TESTLIB_DISCOVERY_DIR="${BLUEPRINT_DIR}" vsi_test_env "${VSI_COMMON_DIR}/tests/run_tests"
 
 
 # -----

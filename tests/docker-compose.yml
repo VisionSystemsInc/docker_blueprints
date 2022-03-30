@@ -2,22 +2,22 @@ version: '2.3'
 
 services:
 
-  gdal_3_2_3:
+  gdal:
     build:
       context: ..
       dockerfile: blueprint_gdal.Dockerfile
       args:
         GDAL_VERSION: "3.2.3"
-    image: &gdal_image vsiri/blueprint_test:gdal-3.2.3
+    image: &gdal_image vsiri/blueprint_test:gdal
 
-  pdal_2_2_0:
+  pdal:
     build:
       context: ..
       dockerfile: blueprint_pdal.Dockerfile
       args:
         GDAL_IMAGE: *gdal_image
         PDAL_VERSION: "2.2.0"
-    image: &pdal_image vsiri/blueprint_test:pdal-2.2.0
+    image: &pdal_image vsiri/blueprint_test:pdal
 
   test_gdal:
     build:
