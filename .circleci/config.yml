@@ -35,7 +35,6 @@ commands:
           name: Checkout vsi_common
           command: |
             git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
-            # git checkout ci_other_repos
             rm -rf "${BLUEPRINT_DIR}"
 
       - checkout:
@@ -93,6 +92,47 @@ commands:
             cat "${BASH_ENV}"
 
       - setup_remote_docker
+
+
+  # pull final images from cache
+  #
+  # useful for fast debugging. For example, to pull GDAL & PDAL test images
+  # - pull_final_images:
+  #     services: "test_gdal test_pdal"
+  #     cache_repo: "${CI_BLUEPRINT_TEST_REPO}"
+  #     local_repo: "vsiri/blueprint_test"
+  #
+  pull_final_images:
+    description: Build setup
+    parameters:
+      services:
+        description: services separated by spaces
+        type: string
+      cache_repo:
+        description: cache repo
+        type: string
+      local_repo:
+        description: local repo
+        type: string
+    steps:
+      - run:
+          name: Pull final images
+          command: |
+
+            set -x
+
+            # array of services
+            SERVICES="<< parameters.services >>"
+            SERVICES=(${SERVICES})
+
+            # pull "final" image for each service from cache
+            for service in "${SERVICES[@]}"; do
+              CACHE_IMAGE="<< parameters.cache_repo >>:${service}_final"
+              LOCAL_IMAGE="<< parameters.local_repo >>:${service}"
+
+              docker pull "${CACHE_IMAGE}"
+              docker tag "${CACHE_IMAGE}" "${LOCAL_IMAGE}"
+            done
 
 
 # -----
@@ -162,12 +202,11 @@ jobs:
                 "${BLUEPRINT_TEST_COMPOSE_FILE}" "${service}"
             done
 
-      # - run:
-      #     name: Run integration tests
-      #     command: |
-      #       source setup.env
-      #       # just test blueprint
-      #       TESTLIB_DISCOVERY_DIR="${BLUEPRINT_DIR}" vsi_test_env "${VSI_COMMON_DIR}/tests/run_tests"
+      - run:
+          name: Run integration tests
+          command: |
+            source setup.env
+            TESTLIB_DISCOVERY_DIR="${BLUEPRINT_DIR}/tests" just test
 
 
 # -----

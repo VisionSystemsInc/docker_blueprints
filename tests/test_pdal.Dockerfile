@@ -3,8 +3,8 @@ ARG GDAL_IMAGE
 ARG PDAL_IMAGE
 
 # blueprints
-FROM "${GDAL_IMAGE}" as gdal
-FROM "${PDAL_IMAGE}" as pdal
+FROM ${GDAL_IMAGE} as gdal
+FROM ${PDAL_IMAGE} as pdal
 
 # base image
 FROM python:3.8

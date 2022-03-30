@@ -15,10 +15,10 @@ begin_test "PDAL"
 (
   setup_test
 
-  DOCKER_IMAGE="vsiri/test_blueprint:test_pdal"
+  DOCKER_IMAGE="vsiri/blueprint_test:test_pdal"
 
   # command line PDAL version
-  RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'pdal info --version' | sed -n 2p)"
+  RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'pdal --version' | sed -n 2p)"
   [ "${RESULT}" = 'pdal 2.2.0 (git-version: Release)' ]
 
   # python PDAL version
