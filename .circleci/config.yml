@@ -138,27 +138,14 @@ jobs:
             # named services
             SERVICES=( gdal pdal )
 
-            # TEMPORARY - warm cache from existing
-            ${CI_LOAD} \
-              --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
-              --other-repos "${CI_BLUEPRINT_TEST_REPO}:gdal_3_2_3" \
-              ${CI_LOAD_OPTIONS[*]} \
-              "${BLUEPRINT_TEST_COMPOSE_FILE}" gdal
-
-            ${CI_LOAD} \
-              --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
-              --other-repos "${CI_BLUEPRINT_TEST_REPO}:pdal_2_2_0" \
-              ${CI_LOAD_OPTIONS[*]} \
-              "${BLUEPRINT_TEST_COMPOSE_FILE}" pdal
-
-            # # ci_load for each service, including default blueprint cache
-            # for service in "${SERVICES[@]}"; do
-            #   ${CI_LOAD} \
-            #     --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
-            #     --other-repos "${CI_BLUEPRINT_REPO}" \
-            #     ${CI_LOAD_OPTIONS[*]} \
-            #     "${BLUEPRINT_TEST_COMPOSE_FILE}" "${service}"
-            # done
+            # ci_load for each service, including default blueprint cache
+            for service in "${SERVICES[@]}"; do
+              ${CI_LOAD} \
+                --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
+                --other-repos "${CI_BLUEPRINT_REPO}" \
+                ${CI_LOAD_OPTIONS[*]} \
+                "${BLUEPRINT_TEST_COMPOSE_FILE}" "${service}"
+            done
 
       - run:
           name: Build test services (ci_load)
