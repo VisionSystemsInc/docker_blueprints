@@ -14,8 +14,6 @@ How to use
 
 Add blueprint services to your docker-compose.yml file, using project specific image names. For example:
 
-.. rubric:: Example
-
 .. code-block:: yaml
 
    services:
@@ -51,8 +49,6 @@ Add blueprint services to your docker-compose.yml file, using project specific i
 
 The Dockerfile is then formulated as follows
 
-.. rubric:: Example
-
 .. code-block:: Dockerfile
 
    # blueprints
@@ -87,8 +83,6 @@ Output dir   ``/usr/local``
 
 Compiles GDAL v3, including OPENJPEG 2.4, ECW J2K 5.5, libtiff4.3, libgeotiff 1.7, PROJ v8
 
-.. rubric:: Example
-
 .. code-block:: Dockerfile
 
    FROM example/project:gdal as gdal
@@ -117,8 +111,6 @@ Output dir   ``/usr/local``
 ============ ============
 
 Compiles PDAL v2. Requires GDAL blueprint.
-
-.. rubric:: Example
 
 .. code-block:: Dockerfile
 
