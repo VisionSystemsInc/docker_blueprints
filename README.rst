@@ -18,33 +18,33 @@ Add blueprint services to your docker-compose.yml file, using project specific i
 
    services:
 
-   gdal:
-      build:
-         context: "${VSI_COMMON_DIR}/docker/blueprints"
-         dockerfile: blueprint_gdal.Dockerfile
-         args:
-            GDAL_VERSION: "3.3.3"
-      image: &gdal_image
-         example/project:gdal
+      gdal:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_gdal.Dockerfile
+            args:
+               GDAL_VERSION: "3.3.3"
+         image: &gdal_image
+            example/project:gdal
 
-   pdal:
-      build:
-         context: "${VSI_COMMON_DIR}/docker/blueprints"
-         dockerfile: blueprint_pdal.Dockerfile
-         args:
-            GDAL_IMAGE: *gdal_image
-            PDAL_VERSION: "2.3.0"
-      image: &pdal_image
-         example/project:pdal
+      pdal:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_pdal.Dockerfile
+            args:
+               GDAL_IMAGE: *gdal_image
+               PDAL_VERSION: "2.3.0"
+         image: &pdal_image
+            example/project:pdal
 
-   example:
-      build:
-         context: .
-         dockerfile: example.Dockerfile
-         args:
-            GDAL_IMAGE: *gdal_image
-            PDAL_IMAGE: *pdal_image
-      image: example/project:example
+      example:
+         build:
+            context: .
+            dockerfile: example.Dockerfile
+            args:
+               GDAL_IMAGE: *gdal_image
+               PDAL_IMAGE: *pdal_image
+         image: example/project:example
 
 
 The Dockerfile is then formulated as follows
@@ -59,7 +59,6 @@ The Dockerfile is then formulated as follows
 
    # base image
    FROM python:3.8
-   SHELL ["/usr/bin/env", "bash", "-euxvc"]
 
    # copy from blueprints
    COPY --from=gdal /usr/local /usr/local
