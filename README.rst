@@ -9,6 +9,70 @@ Docker Blueprints
 A docker blueprint is a (usually complex) docker image that can be included in a multi-stage build so that you don't always have to find and repeat that "perfect set of Dockerfile lines to include software XYZ", such as GDAL, PDAL, etc. , tini, etc.
 
 
+How to use
+==========
+
+Add blueprint services to your docker-compose.yml file, using project specific image names. For example:
+
+.. rubric:: Example
+
+.. code-block:: yaml
+
+   services:
+
+   gdal:
+      build:
+         context: "${VSI_COMMON_DIR}/docker/blueprints"
+         dockerfile: blueprint_gdal.Dockerfile
+         args:
+            GDAL_VERSION: "3.3.3"
+      image: &gdal_image
+         example/project:gdal
+
+   pdal:
+      build:
+         context: "${VSI_COMMON_DIR}/docker/blueprints"
+         dockerfile: blueprint_pdal.Dockerfile
+         args:
+            GDAL_IMAGE: *gdal_image
+            PDAL_VERSION: "2.3.0"
+      image: &pdal_image
+         example/project:pdal
+
+   example:
+      build:
+         context: .
+         dockerfile: example.Dockerfile
+         args:
+            GDAL_IMAGE: *gdal_image
+            PDAL_IMAGE: *pdal_image
+      image: example/project:example
+
+
+The Dockerfile is then formulated as follows
+
+.. rubric:: Example
+
+.. code-block:: Dockerfile
+
+   # blueprints
+   ARG GDAL_IMAGE
+   ARG PDAL_IMAGE
+   FROM ${GDAL_IMAGE} as gdal
+   FROM ${PDAL_IMAGE} as pdal
+
+   # base image
+   FROM python:3.8
+   SHELL ["/usr/bin/env", "bash", "-euxvc"]
+
+   # copy from blueprints
+   COPY --from=gdal /usr/local /usr/local
+   COPY --from=pdal /usr/local /usr/local
+
+   # Only needs to be run once for all blueprints/recipes
+   RUN for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
+
+
 Blueprints
 ==========
 
@@ -27,7 +91,7 @@ Compiles GDAL v3, including OPENJPEG 2.4, ECW J2K 5.5, libtiff4.3, libgeotiff 1.
 
 .. code-block:: Dockerfile
 
-   FROM vsiri/blueprints:gdal as gdal
+   FROM example/project:gdal as gdal
    FROM python:3.8
    COPY --from=gdal /usr/local /usr/local
 
@@ -58,8 +122,8 @@ Compiles PDAL v2. Requires GDAL blueprint.
 
 .. code-block:: Dockerfile
 
-   FROM vsiri/blueprints:gdal as gdal
-   FROM vsiri/blueprints:pdal as gdal
+   FROM example/project:gdal as gdal
+   FROM example/project:pdal as gdal
    FROM python:3.8
    COPY --from=gdal /usr/local /usr/local
    COPY --from=pdal /usr/local /usr/local
