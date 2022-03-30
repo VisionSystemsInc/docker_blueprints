@@ -141,13 +141,13 @@ jobs:
             # TEMPORARY - warm cache from existing
             ${CI_LOAD} \
               --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
-              --other-repos "${CI_BLUEPRINT_REPO}:gdal_3_2_3" \
+              --other-repos "${CI_BLUEPRINT_TEST_REPO}:gdal_3_2_3" \
               ${CI_LOAD_OPTIONS[*]} \
               "${BLUEPRINT_TEST_COMPOSE_FILE}" gdal
 
             ${CI_LOAD} \
               --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
-              --other-repos "${CI_BLUEPRINT_REPO}:pdal_2_2_0" \
+              --other-repos "${CI_BLUEPRINT_TEST_REPO}:pdal_2_2_0" \
               ${CI_LOAD_OPTIONS[*]} \
               "${BLUEPRINT_TEST_COMPOSE_FILE}" pdal
 
