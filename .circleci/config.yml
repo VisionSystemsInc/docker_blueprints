@@ -64,10 +64,10 @@ commands:
             cat \<<EOF >> "${BASH_ENV}"
 
             # these parameters can be overridden by project-level environment variables
-            : ${CI_BLUEPRINT_REPO="vsiri/ci_cache_blueprints"}
-            : ${CI_BLUEPRINT_TEST_REPO="vsiri/ci_cache_blueprint_tests"}
-            : ${CI_BLUEPRINT_VERSION=""}
-            : ${JUST_CI_BRANCH_PUSH=}
+            : \${CI_BLUEPRINT_REPO="vsiri/ci_cache_blueprints"}
+            : \${CI_BLUEPRINT_TEST_REPO="vsiri/ci_cache_blueprint_tests"}
+            : \${CI_BLUEPRINT_VERSION=""}
+            : \${JUST_CI_BRANCH_PUSH=}
 
             # compose file locations
             BLUEPRINT_COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
