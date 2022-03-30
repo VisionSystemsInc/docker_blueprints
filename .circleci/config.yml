@@ -1,0 +1,182 @@
+version: 2.1
+
+# Optional enviromment variables:
+# $CI_BLUEPRINT_REPO - dockerhub repo for blueprint cache (default "vsiri/ci_cache_blueprints")
+# $CI_BLUEPRINT_TEST_REPO - dockerhub repo for blueprint test cache (default "vsiri/ci_cache_blueprint_tests")
+# $CI_BLUEPRINT_VERSION - version string for blueprint cache (default "")
+# $JUST_CI_BRANCH_PUSH - branch (besides master) for dockerhub push
+
+# -----
+# generic yaml anchors
+# -----
+x-references:
+
+  build_config: &build_config
+    docker:
+      - image: cimg/python:3.8
+    shell: /bin/bash -eo pipefail
+    working_directory: ~/vsi
+    environment:
+      VSI_COMMON_DIR: /home/circleci/vsi
+      BLUEPRINT_DIR: /home/circleci/vsi/docker/blueprints
+
+
+# -----
+# circleci custom commands
+# -----
+commands:
+
+  # checkout submodules
+  build_setup:
+    description: Build setup
+    steps:
+
+      - run:
+          name: Checkout vsi_common
+          command: |
+            git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
+            # git checkout ci_other_repos
+            rm -rf "${BLUEPRINT_DIR}"
+
+      - checkout:
+          path: "docker/blueprints"
+
+      - run:
+          name: Setup
+          command: |
+
+            # install additional software
+            pip3 install pyyaml
+
+            # login to dockerhub
+            docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
+
+            # push from main repo, main or ${JUST_CI_BRANCH_PUSH} branches
+            CI_PUSH_OPT="--no-push"
+            if [ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" ]; then
+                if [ "${CIRCLE_BRANCH}" == "main" ] || [ "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}" ]; then
+                  CI_PUSH_OPT=
+                fi
+            fi
+
+            # ----------
+            # permanently add common options to BASH_ENV
+            cat \<<EOF >> "${BASH_ENV}"
+
+            # these parameters can be overridden by project-level environment variables
+            : \${CI_BLUEPRINT_REPO="vsiri/ci_cache_blueprints"}
+            : \${CI_BLUEPRINT_TEST_REPO="vsiri/ci_cache_blueprint_tests"}
+            : \${CI_BLUEPRINT_VERSION=""}
+            : \${JUST_CI_BRANCH_PUSH=}
+
+            # compose file locations
+            BLUEPRINT_COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
+            BLUEPRINT_TEST_COMPOSE_FILE="${BLUEPRINT_DIR}/tests/docker-compose.yml"
+
+            # ci_load options
+            CI_LOAD_OPTIONS=(
+                ${CI_BLUEPRINT_VERSION:+ --cache-version "${CI_BLUEPRINT_VERSION}"}
+                "--quiet-pull"
+                "--print-build"
+                "--print-push-pull"
+                "${CI_PUSH_OPT}"
+                "--recipe-repo IGNORE"
+            )
+
+            # ci_load command
+            CI_LOAD="python3 ${VSI_COMMON_DIR}/linux/ci_load.py"
+
+            EOF
+            # ----------
+
+            # display bash_env
+            cat "${BASH_ENV}"
+
+      - setup_remote_docker
+
+
+# -----
+# CircleCI jobs
+# -----
+jobs:
+
+  build_blueprints:
+    <<: *build_config
+    steps:
+      - build_setup
+
+      - run:
+          name: Build blueprints (ci_load)
+          command: |
+
+            # discover blueprints
+            SERVICES=( $(docker-compose -f "${BLUEPRINT_COMPOSE_FILE}" config --services) )
+
+            # ci_load for each blueprint
+            for service in "${SERVICES[@]}"; do
+              ${CI_LOAD} \
+                --cache-repo "${CI_BLUEPRINT_REPO}" \
+                ${CI_LOAD_OPTIONS[*]} \
+                "${BLUEPRINT_COMPOSE_FILE}" "${service}"
+            done
+
+      - run:
+          name: List docker images
+          command: |
+            docker images | awk 'NR == 1; NR > 1 {print $0 | "sort -k2"}'
+
+
+  build_tests:
+    <<: *build_config
+    steps:
+      - build_setup
+
+      - run:
+          name: Build test blueprints (ci_load)
+          command: |
+
+            # named services
+            SERVICES=( gdal pdal )
+
+            # ci_load for each service, including default blueprint cache
+            for service in "${SERVICES[@]}"; do
+              ${CI_LOAD} \
+                --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
+                --other-repos "${CI_BLUEPRINT_REPO}" \
+                ${CI_LOAD_OPTIONS[*]} \
+                "${BLUEPRINT_TEST_COMPOSE_FILE}" "${service}"
+            done
+
+      - run:
+          name: Build test services (ci_load)
+          command: |
+
+            # named services
+            SERVICES=( test_gdal test_pdal )
+
+            # ci_load for each service
+            for service in "${SERVICES[@]}"; do
+              ${CI_LOAD} \
+                --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
+                ${CI_LOAD_OPTIONS[*]} \
+                "${BLUEPRINT_TEST_COMPOSE_FILE}" "${service}"
+            done
+
+      # - run:
+      #     name: Run integration tests
+      #     command: |
+      #       source setup.env
+      #       # just test blueprint
+      #       TESTLIB_DISCOVERY_DIR="${BLUEPRINT_DIR}" vsi_test_env "${VSI_COMMON_DIR}/tests/run_tests"
+
+
+# -----
+# CircleCI workflows
+# -----
+workflows:
+  build_and_test:
+    jobs:
+      - build_blueprints
+      - build_tests:
+          requires:
+            - build_blueprints
