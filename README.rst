@@ -6,7 +6,7 @@ Docker Blueprints
    :target: https://circleci.com/gh/VisionSystemsInc/docker_blueprints
    :alt: CirclCI
 
-A docker blueprint is a (usually complex) docker image that can be included in a multi-stage build so that you don't always have to find and repeat that "perfect set of Dockerfile lines to include software XYZ", such as GDAL, PDAL, etc. , tini, etc.
+A docker blueprint is a (usually complex) docker image that can be included in a multi-stage build so that you don't always have to find and repeat that "perfect set of Dockerfile lines to include software XYZ", such as GDAL, PDAL, etc.
 
 
 How to use
