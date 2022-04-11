@@ -4,7 +4,7 @@ version: 2.1
 # $CI_BLUEPRINT_REPO - dockerhub repo for blueprint cache (default "vsiri/ci_cache_blueprints")
 # $CI_BLUEPRINT_TEST_REPO - dockerhub repo for blueprint test cache (default "vsiri/ci_cache_blueprint_tests")
 # $CI_BLUEPRINT_VERSION - version string for blueprint cache (default "")
-# $JUST_CI_BRANCH_PUSH - branch (besides master) for dockerhub push
+# $JUST_CI_BRANCH_PUSH - branch (besides main) for dockerhub push
 
 # -----
 # generic yaml anchors
@@ -51,11 +51,13 @@ commands:
             docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
 
             # push from main repo, main or ${JUST_CI_BRANCH_PUSH} branches
-            CI_PUSH_OPT="--no-push"
-            if [ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" ]; then
-                if [ "${CIRCLE_BRANCH}" == "main" ] || [ "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}" ]; then
-                  CI_PUSH_OPT=
-                fi
+            if [[ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" && \
+                  ("${CIRCLE_BRANCH}" == "main" || \
+                   "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}") ]]
+            then
+              CI_PUSH_OPT="--push"
+            else
+              CI_PUSH_OPT="--no-push"
             fi
 
             # ----------
