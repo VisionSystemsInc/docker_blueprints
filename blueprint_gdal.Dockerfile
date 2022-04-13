@@ -246,6 +246,7 @@ ARG GDAL_VERSION=3.3.3
 
 # additional build dependencies
 RUN yum install -y \
+      geos-devel \
       libcurl-devel \
       libjpeg-turbo-devel \
       zlib-devel; \
