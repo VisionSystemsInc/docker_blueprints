@@ -3,6 +3,7 @@ version: '2.3'
 x-args:
   GDAL_VERSION: &gdal_version "3.2.3"
   PDAL_VERSION: &pdal_version "2.2.0"
+  PDAL_PYTHON_VERSION: &pdal_python_version "3.0.2"
   PYTHON_VERSION: &python_version "3.9"
   NUMPY_VERSION: &numpy_version "1.21.4"
 
@@ -25,6 +26,9 @@ services:
       args:
         GDAL_IMAGE: *gdal_image
         PDAL_VERSION: *pdal_version
+        PDAL_PYTHON_VERSION: *pdal_python_version
+        PYTHON_VERSION: *python_version
+        NUMPY_VERSION: *numpy_version
     image: &pdal_image vsiri/blueprint_test:pdal
 
   test_gdal:
@@ -44,4 +48,6 @@ services:
       args:
         GDAL_IMAGE: *gdal_image
         PDAL_IMAGE: *pdal_image
+        PYTHON_VERSION: *python_version
+        NUMPY_VERSION: *numpy_version
     image: vsiri/blueprint_test:test_pdal

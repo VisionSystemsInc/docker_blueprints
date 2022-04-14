@@ -141,28 +141,45 @@ Compiles GDAL v3, including OPENJPEG 2.4, ECW J2K 5.5, libtiff4.3, libgeotiff 1.
 PDAL
 ----
 
-============ ============
-Name         GDAL
-Build Args   ``PDAL_VERSION`` - Version of PDAL to download
-Output dir   ``/usr/local``
-============ ============
+========== ======================= ====
+Name       PDAL
+Output dir ``/usr/local``
+Build Args ``PDAL_VERSION``        Version of PDAL to download
+..         ``PDAL_PYTHON_VERSION`` Version of PDAL python bindings to download
+..         ``PYTHON_VERSION``      Build python bindings for this python version
+..         ``NUMPY_VERSION``       Build python bindings for this numpy version
+========== ======================= ====
 
 Compiles PDAL v2. Requires GDAL blueprint.
 
 .. code-block:: Dockerfile
 
+   # global arguments
+   ARG PYTHON_VERSION
+
+   # blueprint input(s)
    FROM example/project:gdal as gdal
-   FROM example/project:pdal as gdal
-   FROM python:3.8
+   FROM example/project:pdal as pdal
+
+   # base image
+   FROM python:$PYTHON_VERSION
+
+   # local args
+   ARG NUMPY_VERSION
+
+   # additional runtime dependencies
+   RUN apt-get update; \
+      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+         libgeos-c1v5; \
+      rm -r /var/lib/apt/lists/*
+
+   # add blueprint(s)
    COPY --from=gdal /usr/local /usr/local
-   COPY --from=pdal /usr/local /usr/local
+   COPY --from-pdal /usr/local /usr/local
 
-   # install pdal python bindings
-   # note PDAL python bindings are versioned separately from PDAL
-   # PDAL is built in in a manylinux container using the old C++ ABI.
-   # Ensure the pdal python wheel is built from source using the same ABI.
-   RUN CXXFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" pip install PDAL
-
-   # Only needs to be run once for all recipes
+   # Patch all blueprints/recipes
    RUN for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
 
+   # install numpy then GDAL python bindings
+   RUN pip install numpy==${NUMPY_VERSION}; \
+       pip install /usr/local/share/just/wheels/PDAL*.whl
