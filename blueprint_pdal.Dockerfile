@@ -130,6 +130,7 @@ ARG PDAL_VERSION=2.3.0
 
 # additional build dependencies
 RUN yum install -y \
+      geos-devel \
       libcurl-devel \
       libjpeg-turbo-devel \
       libxml2-devel \
