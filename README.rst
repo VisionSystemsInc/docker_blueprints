@@ -68,37 +68,75 @@ The Dockerfile is then formulated as follows
    RUN for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
 
 
+Python Wheels
+=============
+
+Docker blueprints may also build python wheels for a given tool.
+For example, GDAL python bindings are compiled against a user-specified
+``PYTHON_VERSION`` and ``NUMPY_VERSION`` as follows:
+
+.. code-block:: yaml
+
+   services:
+
+      gdal:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_gdal.Dockerfile
+            args:
+               GDAL_VERSION: "3.3.3"
+               PYTHON_VERSION: "3.9"
+               NUMPY_VERSION: "1.22.3"
+         image: example/project:gdal
+
+
 Blueprints
 ==========
+
 
 GDAL
 ----
 
-============ ============
-Name         GDAL
-Build Args   ``GDAL_VERSION`` - Version of GDAL to download
-Output dir   ``/usr/local``
-============ ============
+========== ================== ====
+Name       GDAL
+Output dir ``/usr/local``
+Build Args ``GDAL_VERSION``   Version of GDAL to download
+..         ``PYTHON_VERSION`` Build python bindings for this python version
+..         ``NUMPY_VERSION``  Build python bindings for this numpy version
+========== ================== ====
 
 Compiles GDAL v3, including OPENJPEG 2.4, ECW J2K 5.5, libtiff4.3, libgeotiff 1.7, PROJ v8
 
 .. code-block:: Dockerfile
 
+   # global arguments
+   ARG PYTHON_VERSION
+
+   # blueprint input(s)
    FROM example/project:gdal as gdal
-   FROM python:3.8
+
+   # base image
+   FROM python:$PYTHON_VERSION
+
+   # local args
+   ARG NUMPY_VERSION
+
+   # additional runtime dependencies
+   RUN apt-get update; \
+      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+         libgeos-c1v5; \
+      rm -r /var/lib/apt/lists/*
+
+   # add blueprint
    COPY --from=gdal /usr/local /usr/local
 
-   # numpy must be installed before GDAL python bindings
-   RUN pip install numpy;
-
-   # install GDAL with specific compiler flags
-   # GDAL is built in in a manylinux container using the old C++ ABI.
-   # Ensure the gdal wheel is built from source using the same ABI.
-   RUN GDAL_VERSION=$(cat /usr/local/share/just/info/gdal_version); \
-       CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" pip install GDAL==${GDAL_VERSION};
-
-   # Only needs to be run once for all blueprints/recipes
+   # Patch all blueprints/recipes
    RUN for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
+
+   # install numpy then GDAL python bindings
+   RUN pip install numpy==${NUMPY_VERSION}; \
+       pip install /usr/local/share/just/wheels/GDAL*.whl
+
 
 PDAL
 ----
