@@ -335,19 +335,8 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     fi; \
     #
     # python flavor
-    if [[ "${PYTHON_VERSION}" == 3.7* ]]; then \
-      PYNAME='cp37-cp37m'; \
-    elif [[ "${PYTHON_VERSION}" == 3.8* ]]; then \
-      PYNAME='cp38-cp38'; \
-    elif [[ "${PYTHON_VERSION}" == 3.9* ]]; then \
-      PYNAME='cp39-cp39'; \
-    elif [[ "${PYTHON_VERSION}" == 3.10* ]]; then \
-      PYNAME='cp310-cp310'; \
-    else \
-      echo "Unrecognized PYTHON_VERSION=${PYTHON_VERSION}" >&2; \
-      exit 1; \
-    fi; \
-    PYBIN="/opt/python/${PYNAME}/bin"; \
+    PYBIN=$(ver=$(echo ${PYTHON_VERSION} | sed -E 's|(.)\.([^.]*).*|\1\2|'); \
+            echo /opt/python/cp${ver}-*/bin); \
     #
     # install python dependencies
     "${PYBIN}/pip" install \
