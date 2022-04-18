@@ -215,8 +215,7 @@ COPY --from=tiff ${STAGING_DIR}/usr/local /usr/local
 COPY --from=proj ${STAGING_DIR}/usr/local /usr/local
 
 # install
-RUN mkdir -p "./source" "./build"; \
-    #
+RUN \
     # download & unzip
     TAR_FILE="libgeotiff-${GEOTIFF_VERSION}.tar.gz"; \
     curl -fsSLO "https://download.osgeo.org/geotiff/libgeotiff/${TAR_FILE}"; \
@@ -237,12 +236,13 @@ RUN mkdir -p "./source" "./build"; \
 
 
 # -----------------------------------------------------------------------------
-# GDAL (final image)
+# GDAL setup for build
 # -----------------------------------------------------------------------------
-FROM base
+FROM base as setup
 
 # version argument
 ARG GDAL_VERSION=3.3.3
+ENV GDAL_VERSION=$GDAL_VERSION
 
 # additional build dependencies
 RUN yum install -y \
@@ -252,9 +252,21 @@ RUN yum install -y \
       zlib-devel; \
     yum clean all
 
+# download & unzip
+RUN TAR_FILE="gdal-${GDAL_VERSION}.tar.gz"; \
+    curl -fsSLO "https://download.osgeo.org/gdal/${GDAL_VERSION}/${TAR_FILE}"; \
+    tar -xf "${TAR_FILE}" --strip-components=1; \
+    rm "${TAR_FILE}"
+
+
+# -----------------------------------------------------------------------------
+# GDAL build library
+# -----------------------------------------------------------------------------
+FROM setup as library
+
 # local dependencies to staging directory
-# the base has many other dependencies already in /usr/local,
-# so we isolate packages in a staging directory
+# base manylinux image has many other dependencies already in /usr/local,
+# so we isolate packages in the staging directory
 COPY --from=openjpeg ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=ecw ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=tiff ${STAGING_DIR} ${STAGING_DIR}
@@ -270,20 +282,10 @@ COPY --from=openjpeg ${STAGING_DIR}/usr/local /usr/local
 # add staged libraries
 ENV LD_LIBRARY_PATH="${STAGING_DIR}/usr/local/lib"
 
-# Patch file for downstream image
-ENV GDAL_PATCH_FILE=${STAGING_DIR}/usr/local/share/just/container_build_patch/30_gdal
-ADD 30_gdal ${GDAL_PATCH_FILE}
-RUN chmod +x ${GDAL_PATCH_FILE}
-
-# install
+# configure, build, & install
+# https://raw.githubusercontent.com/OSGeo/gdal/master/gdal/configure
 RUN \
-    # download & unzip
-    TAR_FILE="gdal-${GDAL_VERSION}.tar.gz"; \
-    curl -fsSLO "https://download.osgeo.org/gdal/${GDAL_VERSION}/${TAR_FILE}"; \
-    tar -xf "${TAR_FILE}" --strip-components=1; \
-    #
-    # configure, build, & install
-    # https://raw.githubusercontent.com/OSGeo/gdal/master/gdal/configure
+    # configure
     ./configure \
         --without-libtool \
         --with-hide-internal-symbols \
@@ -305,6 +307,63 @@ RUN \
     # cleanup
     rm -rf /tmp/*;
 
+
+# -----------------------------------------------------------------------------
+# GDAL build wheel
+# -----------------------------------------------------------------------------
+FROM setup as wheel
+
+# version argument
+ARG PYTHON_VERSION=3.9
+ARG NUMPY_VERSION=1.22.3
+
+# wheel directory
+ENV WHEEL_DIR="${STAGING_DIR}/usr/local/share/just/wheels"
+
+# local dependencies to /usr/local
+COPY --from=library ${STAGING_DIR}/usr/local /usr/local
+
+# build wheels
+RUN mkdir -p "${WHEEL_DIR}"; \
+    # SWIG directory
+    SWIG_DIR="$(find . -type d -name 'swig' | head -n 1)"; \
+    #
+    # test for "use_2to3" in setup.py which requires older setuptools
+    # https://github.com/OSGeo/gdal/issues/4467#issuecomment-916676916
+    if grep -q 'use_2to3' "${SWIG_DIR}/python/setup.py"; then \
+        SETUPTOOLS_DEP="setuptools<58"; \
+    fi; \
+    #
+    # python flavor
+    PYBIN=$(ver=$(echo ${PYTHON_VERSION} | sed -E 's|(.)\.([^.]*).*|\1\2|'); \
+            echo /opt/python/cp${ver}-*/bin); \
+    #
+    # install python dependencies
+    "${PYBIN}/pip" install \
+        ${SETUPTOOLS_DEP:-} \
+        numpy==${NUMPY_VERSION}; \
+    # build wheel
+    "${PYBIN}/pip" wheel "${SWIG_DIR}/python" \
+        --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
+    #
+    # cleanup
+    rm -rf /tmp/*; \
+    ls -la "${WHEEL_DIR}";
+
+
+# -----------------------------------------------------------------------------
+# GDAL final
+# -----------------------------------------------------------------------------
+FROM base
+
+# clear /usr/local of all other packages
+RUN rm -rf /usr/local/*
+
 # migrate staging directory to /usr/local
-RUN rm -rf /usr/local; \
-    mv "${STAGING_DIR}/usr/local" /usr/local
+COPY --from=library ${STAGING_DIR}/usr/local /usr/local
+COPY --from=wheel ${STAGING_DIR}/usr/local /usr/local
+
+# Patch file for downstream image
+ENV GDAL_PATCH_FILE=/usr/local/share/just/container_build_patch/30_gdal
+ADD 30_gdal ${GDAL_PATCH_FILE}
+RUN chmod +x ${GDAL_PATCH_FILE}

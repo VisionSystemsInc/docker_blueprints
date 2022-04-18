@@ -1,5 +1,11 @@
 version: '2.3'
 
+x-args:
+  GDAL_VERSION: &gdal_version "3.2.3"
+  PDAL_VERSION: &pdal_version "2.2.0"
+  PYTHON_VERSION: &python_version "3.9"
+  NUMPY_VERSION: &numpy_version "1.21.4"
+
 services:
 
   gdal:
@@ -7,7 +13,9 @@ services:
       context: ..
       dockerfile: blueprint_gdal.Dockerfile
       args:
-        GDAL_VERSION: "3.2.3"
+        GDAL_VERSION: *gdal_version
+        PYTHON_VERSION: *python_version
+        NUMPY_VERSION: *numpy_version
     image: &gdal_image vsiri/blueprint_test:gdal
 
   pdal:
@@ -16,7 +24,7 @@ services:
       dockerfile: blueprint_pdal.Dockerfile
       args:
         GDAL_IMAGE: *gdal_image
-        PDAL_VERSION: "2.2.0"
+        PDAL_VERSION: *pdal_version
     image: &pdal_image vsiri/blueprint_test:pdal
 
   test_gdal:
@@ -25,6 +33,8 @@ services:
       dockerfile: test_gdal.Dockerfile
       args:
         GDAL_IMAGE: *gdal_image
+        PYTHON_VERSION: *python_version
+        NUMPY_VERSION: *numpy_version
     image: vsiri/blueprint_test:test_gdal
 
   test_pdal:

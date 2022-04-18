@@ -1,12 +1,16 @@
 # global args
 ARG GDAL_IMAGE
+ARG PYTHON_VERSION
 
 # blueprints
 FROM ${GDAL_IMAGE} as gdal
 
 # base image
-FROM python:3.8
+FROM python:"${PYTHON_VERSION}"
 SHELL ["/usr/bin/env", "bash", "-euxvc"]
+
+# local args
+ARG NUMPY_VERSION
 
 # additional runtime dependencies
 RUN apt-get update; \
@@ -17,14 +21,9 @@ RUN apt-get update; \
 # copy from blueprints
 COPY --from=gdal /usr/local /usr/local
 
-# numpy must be installed before GDAL python bindings
-RUN pip install numpy;
-
-# install GDAL with specific compiler flags
-# GDAL is built in in a manylinux container using the old C++ ABI.
-# Ensure the gdal wheel is built from source using the same ABI.
-RUN GDAL_VERSION=$(cat /usr/local/share/just/info/gdal_version); \
-    CFLAGS="-D_GLIBCXX_USE_CXX11_ABI=0" pip install GDAL==${GDAL_VERSION};
-
 # Only needs to be run once for all blueprints/recipes
 RUN for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
+
+# install numpy then GDAL python bindings
+RUN pip install numpy==${NUMPY_VERSION}; \
+    pip install /usr/local/share/just/wheels/GDAL*.whl
