@@ -121,12 +121,13 @@ RUN \
 
 
 # -----------------------------------------------------------------------------
-# PDAL
+# PDAL setup for build
 # -----------------------------------------------------------------------------
-FROM base
+FROM base as setup
 
 # version argument
 ARG PDAL_VERSION=2.3.0
+ENV PDAL_VERSION=${PDAL_VERSION}
 
 # additional build dependencies
 RUN yum install -y \
@@ -137,17 +138,18 @@ RUN yum install -y \
       zlib-devel; \
     yum clean all
 
+
+# -----------------------------------------------------------------------------
+# PDAL build library
+# -----------------------------------------------------------------------------
+FROM setup as library
+
 # local dependencies to staging directory
 # the base has many other dependencies already in /usr/local,
 # so we isolate packages in a staging directory
 COPY --from=laszip ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=lazperf ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=nitro ${STAGING_DIR} ${STAGING_DIR}
-
-# Patch file for downstream image
-ENV PDAL_PATCH_FILE=${STAGING_DIR}/usr/local/share/just/container_build_patch/30_pdal
-ADD 30_pdal ${PDAL_PATCH_FILE}
-RUN chmod +x ${PDAL_PATCH_FILE}
 
 # copy GDAL to /usr/local - GDAL will be copied into downstream dockers
 # independently, and should not be added to staging
@@ -177,6 +179,74 @@ RUN \
     # cleanup
     rm -rf /tmp/*;
 
+
+# -----------------------------------------------------------------------------
+# PDAL build wheel
+# -----------------------------------------------------------------------------
+FROM setup as wheel
+
+# version arguments
+# note pdal-python is hosted/versioned separately from PDAL
+ARG PDAL_PYTHON_VERSION=3.0.2
+ARG PYTHON_VERSION=3.9
+ARG NUMPY_VERSION=1.22.3
+
+# wheel directory
+ENV WHEEL_DIR="${STAGING_DIR}/usr/local/share/just/wheels"
+
+# local dependencies to /usr/local
+COPY --from=gdal /usr/local /usr/local
+COPY --from=library ${STAGING_DIR}/usr/local /usr/local
+
+# build wheels
+RUN mkdir -p "${WHEEL_DIR}"; \
+    #
+    # download pdal-python
+    TAR_FILE="${PDAL_PYTHON_VERSION}.tar.gz"; \
+    curl -fsSLO "https://github.com/PDAL/python/archive/refs/tags/${TAR_FILE}"; \
+    tar -xf "${TAR_FILE}" --strip-components=1; \
+    #
+    # workaround - wheel succeeds for Development.Module
+    # https://gitlab.kitware.com/cmake/cmake/-/issues/20425
+    # https://github.com/google/or-tools/issues/2774
+    sed -i 's|Development|Development.Module|g' ./CMakeLists.txt; \
+    #
+    # python flavor
+    PYBIN=$(ver=$(echo ${PYTHON_VERSION} | sed -E 's|(.)\.([^.]*).*|\1\2|'); \
+            echo /opt/python/cp${ver}-*/bin); \
+    #
+    # install python dependencies
+    "${PYBIN}/pip" install \
+        ninja \
+        numpy==${NUMPY_VERSION} \
+        pybind11[global] \
+        scikit-build; \
+    #
+    # build wheel
+    # Note $PYBIN is added to the path to allow cmake (used during the build
+    # process) to identify the correct python version
+    PATH="${PYBIN}:$PATH"; \
+    "${PYBIN}/pip" wheel . \
+        --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
+    #
+    # cleanup
+    rm -rf /tmp/*; \
+    ls -la "${WHEEL_DIR}";
+
+
+# -----------------------------------------------------------------------------
+# PDAL final
+# -----------------------------------------------------------------------------
+FROM base
+
+# clear /usr/local
+RUN rm -rf /usr/local/*
+
 # migrate staging directory to /usr/local
-RUN rm -rf /usr/local; \
-    mv "${STAGING_DIR}/usr/local" /usr/local
+COPY --from=library ${STAGING_DIR}/usr/local /usr/local
+COPY --from=wheel ${STAGING_DIR}/usr/local /usr/local
+
+# Patch file for downstream image
+ENV PDAL_PATCH_FILE=/usr/local/share/just/container_build_patch/30_pdal
+ADD 30_pdal ${PDAL_PATCH_FILE}
+RUN chmod +x ${PDAL_PATCH_FILE}

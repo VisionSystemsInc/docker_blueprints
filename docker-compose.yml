@@ -30,4 +30,7 @@ services:
       #   LAZPERF_VERSION: "${LAZPERF_VERSION}"
       #   NITRO_VERSION: "${NITRO_VERSION}"
       #   PDAL_VERSION: "${PDAL_VERSION}"
+      #   PDAL_PYTHON_VERSION: "${PDAL_PYTHON_VERSION}"
+      #   PYTHON_VERSION: "${PYTHON_VERSION}"
+      #   NUMPY_VERSION: "${NUMPY_VERSION}"
     image: vsiri/blueprint:pdal
