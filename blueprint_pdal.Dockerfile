@@ -209,7 +209,7 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     # workaround - wheel succeeds for Development.Module
     # https://gitlab.kitware.com/cmake/cmake/-/issues/20425
     # https://github.com/google/or-tools/issues/2774
-    sed -i 's|Development|Development.Module|g' ./CMakeLists.txt; \
+    sed -i '/^[ ]*find_package/s/Development /Development.Module /g' ./CMakeLists.txt; \
     #
     # python flavor
     PYBIN=$(ver=$(echo ${PYTHON_VERSION} | sed -E 's|(.)\.([^.]*).*|\1\2|'); \
