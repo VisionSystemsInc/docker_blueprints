@@ -181,13 +181,17 @@ RUN \
     tar -xf ${TAR_FILE} --strip-components=1; \
     #
     # configure, build, & install
-    ./configure \
-        CFLAGS='-DPROJ_RENAME_SYMBOLS -O2' \
-        CXXFLAGS='-DPROJ_RENAME_SYMBOLS -DPROJ_INTERNAL_CPP_NAMESPACE -O2' \
-        --disable-static \
+    mkdir build; cd build; \
+    cmake .. \
+        -DCMAKE_INSTALL_PREFIX="${STAGING_DIR}/usr/local" \
+        -DCMAKE_INSTALL_LIBDIR="lib" \
+        -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DENABLE_IPO=ON \
+        -DBUILD_TESTING:BOOL=OFF \
         | tee "${REPORT_DIR}/proj_configure"; \
-    make -j"$(nproc)"; \
-    make install "DESTDIR=${STAGING_DIR}"; \
+    cmake --build . -j$(nproc); \
+    cmake --install .; \
     echo "${PROJ_VERSION}" > "${REPORT_DIR}/proj_version"; \
     #
     # cleanup
@@ -316,6 +320,7 @@ FROM setup as wheel
 # version argument
 ARG PYTHON_VERSION=3.9
 ARG NUMPY_VERSION=1.22.3
+ARG PYPROJ_VERSION=3.3.0
 
 # wheel directory
 ENV WHEEL_DIR="${STAGING_DIR}/usr/local/share/just/wheels"
@@ -341,9 +346,17 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     # install python dependencies
     "${PYBIN}/pip" install \
         ${SETUPTOOLS_DEP:-} \
+        cython \
         numpy==${NUMPY_VERSION}; \
-    # build wheel
+    #
+    # build gdal wheel
     "${PYBIN}/pip" wheel "${SWIG_DIR}/python" \
+        --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
+    #
+    # build pyproj wheel
+    # While this project already provides manylinux wheels on pypi, building
+    # pyproj here ensures the wheel uses the installed libproj & PROJ_VERSION
+    "${PYBIN}/pip" wheel pyproj==${PYPROJ_VERSION} --no-binary pyproj \
         --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
     #
     # cleanup
