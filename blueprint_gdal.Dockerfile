@@ -130,7 +130,8 @@ FROM base as tiff
 ARG TIFF_VERSION=4.3.0
 
 # additional build dependencies
-RUN yum install -y \
+RUN ulimit -n 1024; \
+    yum install -y \
       libjpeg-turbo-devel \
       zlib-devel; \
     yum clean all
@@ -164,7 +165,8 @@ FROM base as proj
 ARG PROJ_VERSION=8.1.1
 
 # additional build dependencies
-RUN yum install -y \
+RUN ulimit -n 1024; \
+    yum install -y \
       libcurl-devel \
       libjpeg-turbo-devel \
       zlib-devel; \
@@ -208,7 +210,8 @@ FROM base as geotiff
 ARG GEOTIFF_VERSION=1.7.0
 
 # additional build dependencies
-RUN yum install -y \
+RUN ulimit -n 1024; \
+    yum install -y \
       libcurl-devel \
       libjpeg-turbo-devel \
       zlib-devel; \
@@ -249,7 +252,8 @@ ARG GDAL_VERSION=3.3.3
 ENV GDAL_VERSION=$GDAL_VERSION
 
 # additional build dependencies
-RUN yum install -y \
+RUN ulimit -n 1024; \
+    yum install -y \
       geos-devel \
       libcurl-devel \
       libjpeg-turbo-devel \
