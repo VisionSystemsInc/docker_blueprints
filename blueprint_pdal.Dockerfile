@@ -130,7 +130,8 @@ ARG PDAL_VERSION=2.3.0
 ENV PDAL_VERSION=${PDAL_VERSION}
 
 # additional build dependencies
-RUN yum install -y \
+RUN ulimit -n 1024; \
+    yum install -y \
       geos-devel \
       libcurl-devel \
       libjpeg-turbo-devel \
