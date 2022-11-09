@@ -121,6 +121,37 @@ RUN mkdir -p "${STAGING_DIR}/usr/local/lib"; \
 
 
 # -----------------------------------------------------------------------------
+# GEOS
+# -----------------------------------------------------------------------------
+# https://libgeos.org
+FROM base as geos
+
+# version argument
+ARG GEOS_VERSION=3.11.0
+
+# install
+RUN \
+    # download & unzip
+    TAR_FILE="geos-${GEOS_VERSION}.tar.bz2"; \
+    curl -fsSLO "https://download.osgeo.org/geos/${TAR_FILE}"; \
+    tar -xf "${TAR_FILE}" --strip-components=1; \
+    #
+    # configure, build, & install
+    mkdir build; cd build; \
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX="${STAGING_DIR}/usr/local" \
+        -DBUILD_DOCUMENTATION=OFF \
+        | tee "${REPORT_DIR}/geos_configure"; \
+    cmake --build . -j$(nproc); \
+    cmake --install .; \
+    echo "${GEOS_VERSION}" > "${REPORT_DIR}/geos_version"; \
+    #
+    # cleanup
+    rm -rf /tmp/*;
+
+
+# -----------------------------------------------------------------------------
 # LIBTIFF
 # -----------------------------------------------------------------------------
 # https://gitlab.com/libtiff/libtiff
@@ -254,7 +285,6 @@ ENV GDAL_VERSION=$GDAL_VERSION
 # additional build dependencies
 RUN ulimit -n 1024; \
     yum install -y \
-      geos-devel \
       libcurl-devel \
       libjpeg-turbo-devel \
       zlib-devel; \
@@ -277,6 +307,7 @@ FROM setup as library
 # so we isolate packages in the staging directory
 COPY --from=openjpeg ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=ecw ${STAGING_DIR} ${STAGING_DIR}
+COPY --from=geos ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=tiff ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=proj ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=geotiff ${STAGING_DIR} ${STAGING_DIR}
@@ -286,6 +317,7 @@ COPY --from=geotiff ${STAGING_DIR} ${STAGING_DIR}
 # location. GDAL "configure" accepts direct paths for many packages, including
 # ECW and PROJ.
 COPY --from=openjpeg ${STAGING_DIR}/usr/local /usr/local
+COPY --from=geos ${STAGING_DIR}/usr/local /usr/local
 
 # add staged libraries
 ENV LD_LIBRARY_PATH="${STAGING_DIR}/usr/local/lib"
