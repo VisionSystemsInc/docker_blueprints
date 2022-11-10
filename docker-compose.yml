@@ -10,6 +10,7 @@ services:
       #   BASE_IMAGE: "${BASE_IMAGE}"
       #   OPENJPEG_VERSION: "${OPENJPEG_VERSION}"
       #   ECW_VERSION: "${ECW_VERSION}"
+      #   GEOS_VERSION: "${GEOS_VERSION}"
       #   TIFF_VERSION: "${TIFF_VERSION}"
       #   PROJ_VERSION: "${PROJ_VERSION}"
       #   GEOTIFF_VERSION: "${GEOTIFF_VERSION}"

@@ -132,7 +132,6 @@ ENV PDAL_VERSION=${PDAL_VERSION}
 # additional build dependencies
 RUN ulimit -n 1024; \
     yum install -y \
-      geos-devel \
       libcurl-devel \
       libjpeg-turbo-devel \
       libxml2-devel \
