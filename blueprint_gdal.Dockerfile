@@ -72,15 +72,26 @@ RUN \
 # -----------------------------------------------------------------------------
 # ECW v5
 # -----------------------------------------------------------------------------
+# By default (empty ECW_VERSION) this plugin will not be installed as the
+# as the public download link is no longer available.
+#
+# Version options:
+# ARG ECW_VERSION=  # do not install installed
+# ARG ECW_VERSION=5.4.0  # not currently available
+# ARG ECW_VERSION=5.5.0  # not currently available
+#
 FROM base as ecw
 
-# version argument
-ARG ECW_VERSION=5.5.0
+# version argument (do not install by default)
+ARG ECW_VERSION=
 
 # install
 RUN \
     # local variables
-    if [ "${ECW_VERSION}" == "5.4.0" ]; then \
+    if [ -z "${ECW_VERSION:-}" ]; then \
+      echo "ECW decoder will not be installed"; \
+      exit 0; \
+    elif [ "${ECW_VERSION}" == "5.4.0" ]; then \
       ZIP_FILE="erdas-ecw-sdk-5.4.0-update1-linux.zip"; \
       ZIP_URL="https://downloads.hexagongeospatial.com/software/2018/ECW/${ZIP_FILE}"; \
       UNPACK_DIR=/hexagon/ERDAS-ECW_JPEG_2000_SDK-5.4.0/Desktop_Read-Only; \
@@ -115,7 +126,14 @@ RUN \
     rm -rf "${UNPACK_DIR}" /tmp/*;
 
 # link .so files to "/usr/local/lib" for easier discovery
-RUN mkdir -p "${STAGING_DIR}/usr/local/lib"; \
+RUN \
+    # skip linking if not installed
+    if [ -z "${ECW_VERSION:-}" ]; then \
+      echo "ECW decoder will not be installed"; \
+      exit 0; \
+    fi; \
+    # make links
+    mkdir -p "${STAGING_DIR}/usr/local/lib"; \
     cd "${STAGING_DIR}/usr/local/lib"; \
     ln -s ../ecw/lib/x64/release/libNCSEcw.so* .;
 
@@ -325,6 +343,9 @@ ENV LD_LIBRARY_PATH="${STAGING_DIR}/usr/local/lib"
 # configure, build, & install
 # https://raw.githubusercontent.com/OSGeo/gdal/master/gdal/configure
 RUN \
+    # versions from file
+    function get_version() { cat "${REPORT_DIR}/${1}_version" 2>/dev/null || echo ""; }; \
+    ECW_VERSION=$(get_version ecw); \
     # configure
     ./configure \
         --without-libtool \
@@ -336,7 +357,7 @@ RUN \
         --with-geotiff="${STAGING_DIR}/usr/local" \
         --with-openjpeg \
         --with-proj="${STAGING_DIR}/usr/local" \
-        --with-ecw="${STAGING_DIR}/usr/local/ecw" \
+        ${ECW_VERSION:+--with-ecw="${STAGING_DIR}/usr/local/ecw"} \
         | tee "${REPORT_DIR}/gdal_configure"; \
     #
     # build & install
