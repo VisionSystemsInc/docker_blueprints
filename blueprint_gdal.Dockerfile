@@ -401,9 +401,11 @@ RUN mkdir -p "${WHEEL_DIR}"; \
             echo /opt/python/cp${ver}-*/bin); \
     #
     # install python dependencies
+    # Note pyproj incompatibility with cython 3+
+    # https://github.com/pyproj4/pyproj/issues/1321
     "${PYBIN}/pip" install \
         ${SETUPTOOLS_DEP:-} \
-        cython \
+        "cython<3" \
         numpy==${NUMPY_VERSION}; \
     #
     # build gdal wheel
