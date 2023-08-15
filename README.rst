@@ -65,7 +65,7 @@ The Dockerfile is then formulated as follows
    COPY --from=pdal /usr/local /usr/local
 
    # Only needs to be run once for all blueprints/recipes
-   RUN for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
+   RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
 
 
 Python Wheels
@@ -131,7 +131,7 @@ Compiles GDAL v3, including OPENJPEG 2.4, GEOS 3.11.0, libtiff 4.3, libgeotiff 1
    COPY --from=gdal /usr/local /usr/local
 
    # Patch all blueprints/recipes
-   RUN for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
+   RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
 
    # install numpy then GDAL python bindings
    RUN pip install numpy==${NUMPY_VERSION}; \
@@ -178,7 +178,7 @@ Compiles PDAL v2. Requires GDAL blueprint.
    COPY --from-pdal /usr/local /usr/local
 
    # Patch all blueprints/recipes
-   RUN for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
+   RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
 
    # install numpy then GDAL python bindings
    RUN pip install numpy==${NUMPY_VERSION}; \
