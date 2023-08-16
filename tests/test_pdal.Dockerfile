@@ -25,7 +25,7 @@ COPY --from=gdal /usr/local /usr/local
 COPY --from=pdal /usr/local /usr/local
 
 # Only needs to be run once for all blueprints/recipes
-RUN for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
+RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
 
 # install numpy first, then pdal from wheel
 RUN pip install numpy==${NUMPY_VERSION}; \
