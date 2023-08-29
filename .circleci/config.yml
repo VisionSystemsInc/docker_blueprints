@@ -152,7 +152,7 @@ jobs:
           command: |
 
             # discover blueprints
-            SERVICES=( $(docker-compose -f "${BLUEPRINT_COMPOSE_FILE}" config --services) )
+            SERVICES=( $(docker compose -f "${BLUEPRINT_COMPOSE_FILE}" config --services) )
 
             # ci_load for each blueprint
             for service in "${SERVICES[@]}"; do
