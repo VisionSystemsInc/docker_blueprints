@@ -25,7 +25,7 @@
 # -----------------------------------------------------------------------------
 
 # global args
-ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2022-02-13-594988e"
+ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2024-07-02-9ac04ee"
 
 # base image
 FROM ${BASE_IMAGE} as base
