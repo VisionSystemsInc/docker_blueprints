@@ -253,4 +253,4 @@ Compiles glog wheel for use in python. This is primarily to setup [Failure Signa
 Blueprint maintenance
 ---------------------
 
-To update build dependencies: `docker compose run --rm glog-compile`
+To update build dependencies: `docker compose run -f maintenance.yml--rm glog-compile`
