@@ -178,7 +178,7 @@ jobs:
           command: |
 
             # named services
-            SERVICES=( gdal pdal )
+            SERVICES=( gdal pdal glog )
 
             # ci_load for each service, including default blueprint cache
             for service in "${SERVICES[@]}"; do
@@ -194,7 +194,7 @@ jobs:
           command: |
 
             # named services
-            SERVICES=( test_gdal test_pdal )
+            SERVICES=( test_gdal test_pdal test_glog )
 
             # ci_load for each service
             for service in "${SERVICES[@]}"; do

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+
+if [ -z "${VSI_COMMON_DIR+set}" ]; then
+  VSI_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.."; pwd)"
+fi
+
+source "${VSI_COMMON_DIR}/tests/testlib.bsh"
+
+: ${DOCKER=docker}
+
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "glog"
+(
+  setup_test
+
+  DOCKER_IMAGE="vsiri/blueprint_test:test_glog"
+
+  RESULT=$("${DOCKER}" run --rm "${DOCKER_IMAGE}" /venv/bin/python -c "import glog11; \
+    glog11.initGoogleLogging('ok'); \
+    glog11.installFailureSignalHandler(); \
+    import os; \
+    os.kill(os.getpid(), 15)" 2>&1)
+
+# Example output
+#   *** Aborted at 1729282230 (unix time) try "date -d @1729282230" if you are using GNU date ***
+#   PC: @     0x7fab0cc5b267 kill
+#   *** SIGTERM (@0x1) received by PID 1 (TID 0x7fab0d1eab80) from PID 1; stack trace: ***
+#       @     0x7fab0ccacfa7 (/usr/lib/x86_64-linux-gnu/libc.so.6+0x8dfa6)
+#       @     0x7fab0c968e88 google::(anonymous namespace)::FailureSignalHandler(int, siginfo_t*, void*)
+#       @     0x7fab0cc5b050 (/usr/lib/x86_64-linux-gnu/libc.so.6+0x3c04f)
+#       @     0x7fab0cc5b267 kill
+#       @     0x7fab0cf2a6c7 os_kill
+#       @     0x7fab0cf7d3cf cfunction_vectorcall_FASTCALL
+#       @     0x7fab0cf991e8 _PyEval_EvalFrameDefault
+#       @     0x7fab0cf95162 _PyEval_EvalCode
+#       @     0x7fab0cfd702f _PyEval_EvalCodeWithName
+#       @     0x7fab0cfd6fd9 PyEval_EvalCodeEx
+#       @     0x7fab0cfd6f9b PyEval_EvalCode
+#       @     0x7fab0cfe3223 run_eval_code_obj
+#       @     0x7fab0cfe31ba run_mod
+#       @     0x7fab0cfe34a1 PyRun_StringFlags
+#       @     0x7fab0cf13164 PyRun_SimpleStringFlags
+#       @     0x7fab0cf22620 Py_RunMain.cold
+#       @     0x7fab0cfe77b7 Py_BytesMain
+#       @     0x7fab0cc4624a (/usr/lib/x86_64-linux-gnu/libc.so.6+0x27249)
+#       @     0x7fab0cc46305 __libc_start_main
+#       @     0x5625edda2081 _start
+
+  # command line GDAL version
+  [[ "${RESULT}" = *"*** Aborted at"* ]] || false
+  [[ "${RESULT}" = *"*** SIGTERM ("*" received by PID "*" from PID"*"; stack trace: ***"* ]] || false
+)
+end_test

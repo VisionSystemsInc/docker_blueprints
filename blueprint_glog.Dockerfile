@@ -47,6 +47,6 @@ RUN curl -L https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_a
     auditwheel repair glog11*cp"${python_major}${python_minor}"*.whl -w /usr/local/share/just/wheels; \
     rm -r glog11*cp"${python_major}${python_minor}"*.whl /tmp/venv
 
-FROM scrap
+FROM scratch
 
 COPY --from=builder /usr/local/share/just/wheels /usr/local/share/just/wheels
