@@ -152,7 +152,7 @@ jobs:
           command: |
 
             # discover blueprints
-            SERVICES=( $(docker compose -f "${BLUEPRINT_COMPOSE_FILE}" config --services) )
+            SERVICES=( gdal pdal glog )
 
             # ci_load for each blueprint
             for service in "${SERVICES[@]}"; do

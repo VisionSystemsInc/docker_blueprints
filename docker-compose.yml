@@ -46,3 +46,22 @@ services:
       #   LIBUNWIND_VERSION: "${LIBUNWIND_VERSION}"
       #   GLOG_VERSION: "${GLOG_VERSION}"
     image: vsiri/blueprint:glog
+
+  # Maintanence
+  glog-compile:
+    image: quay.io/pypa/manylinux_2_28_x86_64
+    command: |
+      bash -euxvc '
+        for v in $$(seq 8 13); do
+          python_version=3"$${v}"
+          python_dir=("/opt/python/cp$${python_version}-"cp*[0-9m]); declare -p python_dir
+          "$${python_dir}/bin/python" -m venv /tmp/venv
+          /tmp/venv/bin/pip install -c /src/requirements$${python_version}.txt pip-tools
+          /tmp/venv/bin/pip-compile -U --strip-extras --allow-unsafe --output-file=/src/requirements$${python_version}.txt /src/requirements.in
+          chown "$$(stat /src -c %u:%g)" /src/requirements$${python_version}.txt
+          rm -r /tmp/venv
+        done'
+    volumes:
+      - type: bind
+        target: /src
+        source: ./glog11
