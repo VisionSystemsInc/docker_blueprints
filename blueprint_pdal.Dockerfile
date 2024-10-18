@@ -24,7 +24,7 @@ ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2024-07-02-9ac04ee"
 ARG GDAL_IMAGE="vsiri/blueprint:gdal"
 
 # blueprint dependencies
-FROM ${GDAL_IMAGE} AS` gdal
+FROM ${GDAL_IMAGE} AS gdal
 
 # base image
 FROM ${BASE_IMAGE} AS base
