@@ -54,8 +54,8 @@ The Dockerfile is then formulated as follows
    # blueprints
    ARG GDAL_IMAGE
    ARG PDAL_IMAGE
-   FROM ${GDAL_IMAGE} as gdal
-   FROM ${PDAL_IMAGE} as pdal
+   FROM ${GDAL_IMAGE} AS gdal
+   FROM ${PDAL_IMAGE} AS pdal
 
    # base image
    FROM python:3.8
@@ -113,7 +113,7 @@ Compiles GDAL v3, including OPENJPEG 2.4, GEOS 3.11.0, libtiff 4.3, libgeotiff 1
    ARG PYTHON_VERSION
 
    # blueprint input(s)
-   FROM example/project:gdal as gdal
+   FROM example/project:gdal AS gdal
 
    # base image
    FROM python:$PYTHON_VERSION
@@ -158,8 +158,8 @@ Compiles PDAL v2. Requires GDAL blueprint.
    ARG PYTHON_VERSION
 
    # blueprint input(s)
-   FROM example/project:gdal as gdal
-   FROM example/project:pdal as pdal
+   FROM example/project:gdal AS gdal
+   FROM example/project:pdal AS pdal
 
    # base image
    FROM python:$PYTHON_VERSION
@@ -183,3 +183,74 @@ Compiles PDAL v2. Requires GDAL blueprint.
    # install numpy then GDAL python bindings
    RUN pip install numpy==${NUMPY_VERSION}; \
        pip install /usr/local/share/just/wheels/PDAL*.whl
+
+pybind11 bindings for glog
+--------------------------
+
+.. code-block:: yaml
+
+   services:
+
+      glog:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_glog.Dockerfile
+            args:
+               # GLOG_VERSION: "v0.7.1"
+               # https://github.com/google/glog/tags
+               # PYTHON_VERSION: "3.8.12"
+               # https://github.com/pypa/manylinux/blob/main/docker/Dockerfile
+               # BASE_IMAGE: "quay.io/pypa/manylinux_2_28_x86_64"
+               # https://quay.io/repository/pypa/manylinux_2_28_x86_64?tab=tags&tag=latest
+               # LIBUNWIND_VERSION: "v1.6.2"
+               # https://github.com/libunwind/libunwind/tags
+         image: &glog_image
+            example/project:glog
+
+      example:
+         build:
+            context: .
+            dockerfile: example.Dockerfile
+            args:
+               GLOG_IMAGE: *glog_image
+         image: example/project:example
+
+
+========== ======================= ====
+Name       Google Logging
+Output dir ``/usr/local``
+Build Args ``BASE_IMAGE``          Base image to build the wheel in. Default: `quay.io/pypa/manylinux_2_28_x86_64`
+..         ``PYTHON_VERSION``      Build python bindings for this python version
+..         ``LIBUNWIND_VERSION``   LibUnwind version to build from source
+..         ``GLOG_VERSION``        Glog version to build from source
+========== ======================= ====
+
+Compiles glog wheel for use in python. This is primarily to setup [Failure Signal Handlers](https://google.github.io/glog/0.7.1/failures/).
+
+.. code-block:: Dockerfile
+
+   # global arguments
+   ARG GLOG_IMAGE
+   FROM ${GLOG_IMAGE} AS glog
+
+   FROM some_image
+
+   ...
+
+   COPY --from=glog /usr/local /usr/local
+
+   RUN pip install /usr/local/share/just/wheels/*
+   # Or using pip-tools, add "--find-links /usr/local/share/just/wheels" to requirements.in
+
+.. code-block:: example.py
+
+    import glog11
+
+    glog11.initGoogleLogging("programName")
+    glog11.installFailureSignalHandler()
+
+---------------------
+Blueprint maintenance
+---------------------
+
+To update build dependencies: `docker compose run --rm glog-compile`

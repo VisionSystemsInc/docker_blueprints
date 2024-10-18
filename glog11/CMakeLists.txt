@@ -1,0 +1,52 @@
+# Require CMake 3.15+ (matching scikit-build-core) Use new versions of all
+# policies up to CMake 3.27
+cmake_minimum_required(VERSION 3.17...3.27)
+
+project(
+  ${SKBUILD_PROJECT_NAME}
+  VERSION ${SKBUILD_PROJECT_VERSION}
+  LANGUAGES CXX)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# For future use
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    # Some fixes for the Glog library.
+    add_definitions("-DGLOG_NO_ABBREVIATED_SEVERITIES")
+    add_definitions("-DGL_GLEXT_PROTOTYPES")
+    add_definitions("-DNOMINMAX")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+    # Enable object level parallel builds in Visual Studio.
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+endif()
+
+# Find the module development requirements (requires FindPython from 3.17 or
+# scikit-build-core's built-in backport)
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+find_package(pybind11 CONFIG REQUIRED)
+# set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/glog11/cmake")
+# find_package(glog REQUIRED)
+find_package(glog 0.7.1 REQUIRED)
+# find_package(gflags REQUIRED CONFIG)
+
+# Fix for https://github.com/conda-forge/glog-feedstock/issues/26
+# target_compile_definitions(glog INTERFACE GLOG_USE_GLOG_EXPORT)
+# set_target_properties(glog::glog
+#                       PROPERTIES IMPORTED_LOCATION "${GLOG_LIB}"
+#                                  INTERFACE_INCLUDE_DIRECTORIES "${GLOG_INCLUDE_DIR}"
+#                                  INTERFACE_COMPILE_DEFINITIONS "GLOG_USE_GLOG_EXPORT")
+# Add a library using FindPython's tooling (pybind11 also provides a helper like
+# this)
+# python_add_library(glog11 MODULE py_glog11.cpp WITH_SOABI)
+pybind11_add_module(glog11 py_glog11.cpp WITH_SOABI)
+
+# This is passing in the version as a define just as an example
+target_compile_definitions(glog11 PRIVATE VERSION_INFO=\"${PROJECT_VERSION}\")
+
+target_link_libraries(glog11 PRIVATE glog::glog pybind11::headers)
+
+# The install directory is the output (wheel) directory
+install(TARGETS glog11 LIBRARY DESTINATION .)
