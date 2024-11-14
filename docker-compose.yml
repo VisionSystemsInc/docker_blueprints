@@ -1,7 +1,5 @@
-version: '2.3'
-
 services:
-
+  # Example
   gdal:
     build:
       context: .
@@ -20,6 +18,7 @@ services:
       #   NUMPY_VERSION: "${NUMPY_VERSION}"
     image: vsiri/blueprint:gdal
 
+  # Example
   pdal:
     build:
       context: .
@@ -35,3 +34,34 @@ services:
       #   PYTHON_VERSION: "${PYTHON_VERSION}"
       #   NUMPY_VERSION: "${NUMPY_VERSION}"
     image: vsiri/blueprint:pdal
+
+  # Example
+  glog:
+    build:
+      context: .
+      dockerfile: blueprint_glog.Dockerfile
+      # args:
+      #   BASE_IMAGE: "${BASE_IMAGE}"
+      #   PYTHON_VERSION: "${PYTHON_VERSION}"
+      #   LIBUNWIND_VERSION: "${LIBUNWIND_VERSION}"
+      #   GLOG_VERSION: "${GLOG_VERSION}"
+    image: vsiri/blueprint:glog
+
+  # Maintanence
+  glog-compile:
+    image: quay.io/pypa/manylinux_2_28_x86_64
+    command: |
+      bash -euxvc '
+        for v in $$(seq 8 13); do
+          python_version=3"$${v}"
+          python_dir=("/opt/python/cp$${python_version}-"cp*[0-9m])
+          "$${python_dir}/bin/python" -m venv /tmp/venv
+          /tmp/venv/bin/pip install -c /src/requirements$${python_version}.txt pip-tools
+          /tmp/venv/bin/pip-compile -U --strip-extras --allow-unsafe --output-file=/src/requirements$${python_version}.txt /src/requirements.in
+          chown "$$(stat /src -c %u:%g)" /src/requirements$${python_version}.txt
+          rm -r /tmp/venv
+        done'
+    volumes:
+      - type: bind
+        target: /src
+        source: ./pyglog

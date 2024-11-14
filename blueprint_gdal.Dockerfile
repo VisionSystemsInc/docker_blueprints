@@ -28,7 +28,7 @@
 ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2024-07-02-9ac04ee"
 
 # base image
-FROM ${BASE_IMAGE} as base
+FROM ${BASE_IMAGE} AS base
 
 # Set shell to bash
 SHELL ["/usr/bin/env", "/bin/bash", "-euxvc"]
@@ -44,7 +44,7 @@ WORKDIR /tmp
 # -----------------------------------------------------------------------------
 # OPENJPEG v2
 # -----------------------------------------------------------------------------
-FROM base as openjpeg
+FROM base AS openjpeg
 
 # version argument
 ARG OPENJPEG_VERSION=2.4.0
@@ -80,7 +80,7 @@ RUN \
 # ARG ECW_VERSION=5.4.0  # not currently available
 # ARG ECW_VERSION=5.5.0  # not currently available
 #
-FROM base as ecw
+FROM base AS ecw
 
 # version argument (do not install by default)
 ARG ECW_VERSION=
@@ -142,7 +142,7 @@ RUN \
 # GEOS
 # -----------------------------------------------------------------------------
 # https://libgeos.org
-FROM base as geos
+FROM base AS geos
 
 # version argument
 ARG GEOS_VERSION=3.11.0
@@ -173,7 +173,7 @@ RUN \
 # LIBTIFF
 # -----------------------------------------------------------------------------
 # https://gitlab.com/libtiff/libtiff
-FROM base as tiff
+FROM base AS tiff
 
 # version argument
 ARG TIFF_VERSION=4.3.0
@@ -208,7 +208,7 @@ RUN \
 # PROJ v6
 # -----------------------------------------------------------------------------
 # install instructions: https://proj.org/install.html
-FROM base as proj
+FROM base AS proj
 
 # version argument
 ARG PROJ_VERSION=8.1.1
@@ -253,7 +253,7 @@ RUN \
 # GEOTIFF
 # -----------------------------------------------------------------------------
 # https://github.com/OSGeo/libgeotiff
-FROM base as geotiff
+FROM base AS geotiff
 
 # version argument
 ARG GEOTIFF_VERSION=1.7.0
@@ -294,7 +294,7 @@ RUN \
 # -----------------------------------------------------------------------------
 # GDAL setup for build
 # -----------------------------------------------------------------------------
-FROM base as setup
+FROM base AS setup
 
 # version argument
 ARG GDAL_VERSION=3.3.3
@@ -318,7 +318,7 @@ RUN TAR_FILE="gdal-${GDAL_VERSION}.tar.gz"; \
 # -----------------------------------------------------------------------------
 # GDAL build library
 # -----------------------------------------------------------------------------
-FROM setup as library
+FROM setup AS library
 
 # local dependencies to staging directory
 # base manylinux image has many other dependencies already in /usr/local,
@@ -372,7 +372,7 @@ RUN \
 # -----------------------------------------------------------------------------
 # GDAL build wheel
 # -----------------------------------------------------------------------------
-FROM setup as wheel
+FROM setup AS wheel
 
 # version argument
 ARG PYTHON_VERSION=3.9

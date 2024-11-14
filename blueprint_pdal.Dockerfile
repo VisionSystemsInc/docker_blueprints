@@ -24,10 +24,10 @@ ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2024-07-02-9ac04ee"
 ARG GDAL_IMAGE="vsiri/blueprint:gdal"
 
 # blueprint dependencies
-FROM ${GDAL_IMAGE} as gdal
+FROM ${GDAL_IMAGE} AS gdal
 
 # base image
-FROM ${BASE_IMAGE} as base
+FROM ${BASE_IMAGE} AS base
 
 # Set shell to bash
 SHELL ["/usr/bin/env", "/bin/bash", "-euxvc"]
@@ -44,7 +44,7 @@ WORKDIR /tmp
 # -----------------------------------------------------------------------------
 # LASZIP
 # -----------------------------------------------------------------------------
-FROM base as laszip
+FROM base AS laszip
 
 # version argument
 ARG LASZIP_VERSION=3.4.3
@@ -70,7 +70,7 @@ RUN \
 # -----------------------------------------------------------------------------
 # LAZ-PERF
 # -----------------------------------------------------------------------------
-FROM base as lazperf
+FROM base AS lazperf
 
 # version argument
 ARG LAZPERF_VERSION=2.1.0
@@ -97,7 +97,7 @@ RUN \
 # -----------------------------------------------------------------------------
 # NITRO NITF
 # -----------------------------------------------------------------------------
-FROM base as nitro
+FROM base AS nitro
 
 # version argument
 ARG NITRO_VERSION=2.7dev-6
@@ -123,7 +123,7 @@ RUN \
 # -----------------------------------------------------------------------------
 # PDAL setup for build
 # -----------------------------------------------------------------------------
-FROM base as setup
+FROM base AS setup
 
 # version argument
 ARG PDAL_VERSION=2.3.0
@@ -142,7 +142,7 @@ RUN ulimit -n 1024; \
 # -----------------------------------------------------------------------------
 # PDAL build library
 # -----------------------------------------------------------------------------
-FROM setup as library
+FROM setup AS library
 
 # local dependencies to staging directory
 # the base has many other dependencies already in /usr/local,
@@ -183,7 +183,7 @@ RUN \
 # -----------------------------------------------------------------------------
 # PDAL build wheel
 # -----------------------------------------------------------------------------
-FROM setup as wheel
+FROM setup AS wheel
 
 # version arguments
 # note pdal-python is hosted/versioned separately from PDAL
