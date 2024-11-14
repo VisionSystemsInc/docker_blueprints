@@ -32,18 +32,9 @@ find_package(pybind11 CONFIG REQUIRED)
 find_package(glog 0.7.1 REQUIRED)
 # find_package(gflags REQUIRED CONFIG)
 
-# Fix for https://github.com/conda-forge/glog-feedstock/issues/26
-# target_compile_definitions(glog INTERFACE GLOG_USE_GLOG_EXPORT)
-# set_target_properties(glog::glog
-#                       PROPERTIES IMPORTED_LOCATION "${GLOG_LIB}"
-#                                  INTERFACE_INCLUDE_DIRECTORIES "${GLOG_INCLUDE_DIR}"
-#                                  INTERFACE_COMPILE_DEFINITIONS "GLOG_USE_GLOG_EXPORT")
-# Add a library using FindPython's tooling (pybind11 also provides a helper like
-# this)
-# python_add_library(pyglog MODULE py_glog.cpp WITH_SOABI)
 pybind11_add_module(pyglog py_glog.cpp WITH_SOABI)
 
-# This is passing in the version as a define just as an example
+# This is passing in the version as a #define
 target_compile_definitions(pyglog PRIVATE VERSION_INFO=\"${PROJECT_VERSION}\")
 
 target_link_libraries(pyglog PRIVATE glog::glog pybind11::headers)

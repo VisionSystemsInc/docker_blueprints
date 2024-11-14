@@ -2,6 +2,8 @@
 ARG BASE_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
 FROM "${BASE_IMAGE}" AS builder
 
+SHELL ["/usr/bin/env", "/bin/bash", "-euxvc"]
+
 ARG LIBUNWIND_VERSION=v1.6.2
 
 RUN git clone https://github.com/libunwind/libunwind.git /libunwind; \
