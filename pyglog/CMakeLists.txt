@@ -27,7 +27,7 @@ endif()
 # scikit-build-core's built-in backport)
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
-# set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/glog11/cmake")
+# set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/pyglog/cmake")
 # find_package(glog REQUIRED)
 find_package(glog 0.7.1 REQUIRED)
 # find_package(gflags REQUIRED CONFIG)
@@ -40,13 +40,13 @@ find_package(glog 0.7.1 REQUIRED)
 #                                  INTERFACE_COMPILE_DEFINITIONS "GLOG_USE_GLOG_EXPORT")
 # Add a library using FindPython's tooling (pybind11 also provides a helper like
 # this)
-# python_add_library(glog11 MODULE py_glog11.cpp WITH_SOABI)
-pybind11_add_module(glog11 py_glog11.cpp WITH_SOABI)
+# python_add_library(pyglog MODULE py_glog.cpp WITH_SOABI)
+pybind11_add_module(pyglog py_glog.cpp WITH_SOABI)
 
 # This is passing in the version as a define just as an example
-target_compile_definitions(glog11 PRIVATE VERSION_INFO=\"${PROJECT_VERSION}\")
+target_compile_definitions(pyglog PRIVATE VERSION_INFO=\"${PROJECT_VERSION}\")
 
-target_link_libraries(glog11 PRIVATE glog::glog pybind11::headers)
+target_link_libraries(pyglog PRIVATE glog::glog pybind11::headers)
 
 # The install directory is the output (wheel) directory
-install(TARGETS glog11 LIBRARY DESTINATION .)
+install(TARGETS pyglog LIBRARY DESTINATION .)

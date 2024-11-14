@@ -26,7 +26,7 @@ RUN git clone https://github.com/google/glog.git /glog; \
     cd /; \
     rm -r glog
 
-COPY glog11 /glog11
+COPY pyglog /pyglog
 
 ARG PYTHON_VERSION=3.8.12
 
@@ -39,13 +39,13 @@ RUN curl -L https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_a
     echo /usr/local/lib64 > /etc/ld.so.conf.d/10-local.conf; \
     ldconfig; \
     # Dynamically set version
-    sed -i 's/^version = .*/version = "'"${GLOG_VERSION}"'"/' /glog11/pyproject.toml; \
+    sed -i 's/^version = .*/version = "'"${GLOG_VERSION}"'"/' /pyglog/pyproject.toml; \
     # TODO: Add --no-deps --no-build-isolation, requirements.in, .txt, pip-tools, etc...
     "${python_dir}/bin/python" -m venv /tmp/venv; \
-    /tmp/venv/bin/pip install -r /glog11/requirements${python_major}${python_minor}.txt; \
-    /tmp/venv/bin/pip wheel --no-deps --no-build-isolation /glog11; \
-    auditwheel repair glog11*cp"${python_major}${python_minor}"*.whl -w /usr/local/share/just/wheels; \
-    rm -r glog11*cp"${python_major}${python_minor}"*.whl /tmp/venv
+    /tmp/venv/bin/pip install -r /pyglog/requirements${python_major}${python_minor}.txt; \
+    /tmp/venv/bin/pip wheel --no-deps --no-build-isolation /pyglog; \
+    auditwheel repair pyglog*cp"${python_major}${python_minor}"*.whl -w /usr/local/share/just/wheels; \
+    rm -r pyglog*cp"${python_major}${python_minor}"*.whl /tmp/venv
 
 FROM scratch
 

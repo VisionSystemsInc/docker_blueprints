@@ -244,10 +244,10 @@ Compiles glog wheel for use in python. This is primarily to setup [Failure Signa
 
 .. code-block:: example.py
 
-    import glog11
+    import pyglog
 
-    glog11.initGoogleLogging("programName")
-    glog11.installFailureSignalHandler()
+    pyglog.initGoogleLogging("programName")
+    pyglog.installFailureSignalHandler()
 
 ---------------------
 Blueprint maintenance

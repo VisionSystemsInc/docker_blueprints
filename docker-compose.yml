@@ -64,4 +64,4 @@ services:
     volumes:
       - type: bind
         target: /src
-        source: ./glog11
+        source: ./pyglog

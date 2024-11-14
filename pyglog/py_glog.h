@@ -4,7 +4,7 @@
 
 #include <glog/logging.h>
 
-// using namespace glog11
+// using namespace pyglog
 using namespace pybind11::literals;
 namespace py = pybind11;
 

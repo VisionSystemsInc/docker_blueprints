@@ -2,12 +2,12 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include "py_glog11.h"
+#include "py_glog.h"
 
-// using namespace glog11;
+// using namespace pyglog;
 namespace py = pybind11;
 
-PYBIND11_MODULE(glog11, m) {
+PYBIND11_MODULE(pyglog, m) {
   m.doc() = "glog wrapper using pybind11";
 #ifdef VERSION_INFO
   m.attr("__version__") = py::str(VERSION_INFO);

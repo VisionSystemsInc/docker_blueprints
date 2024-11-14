@@ -3,7 +3,7 @@ requires = ["scikit-build-core>=0.3.3", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "glog11"
+name = "pyglog"
 version = "0.7.1"
 description="Pybind11 wrapper for glog"
 readme = "README.md"

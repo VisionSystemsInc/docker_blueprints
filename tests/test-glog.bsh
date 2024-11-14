@@ -17,9 +17,9 @@ begin_test "glog"
 
   DOCKER_IMAGE="vsiri/blueprint_test:test_glog"
 
-  RESULT=$("${DOCKER}" run --rm "${DOCKER_IMAGE}" /venv/bin/python -c "import glog11; \
-    glog11.initGoogleLogging('ok'); \
-    glog11.installFailureSignalHandler(); \
+  RESULT=$("${DOCKER}" run --rm "${DOCKER_IMAGE}" /venv/bin/python -c "import pyglog; \
+    pyglog.initGoogleLogging('ok'); \
+    pyglog.installFailureSignalHandler(); \
     import os; \
     os.kill(os.getpid(), 15)" 2>&1)
 
