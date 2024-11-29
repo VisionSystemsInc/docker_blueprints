@@ -184,6 +184,70 @@ Compiles PDAL v2. Requires GDAL blueprint.
    RUN pip install numpy==${NUMPY_VERSION}; \
        pip install /usr/local/share/just/wheels/PDAL*.whl
 
+SWIG bindings for S2Geometry
+----------------------------
+
+.. code-block:: yaml
+
+   services:
+
+      s2:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_s2geometry.Dockerfile
+            args:
+               # S2GEOMETRY_VERSION: "v0.11.1"
+               # https://github.com/google/s2geometry/tags
+               # PYTHON_VERSION: "3.10.15"
+               # https://hub.docker.com/_/python/tags
+               # BASE_IMAGE: "python:3.10.15-bookworm"
+               # https://hub.docker.com/_/python/tags
+               # ABSEIL_VERSION: "v1.6.2"
+               # https://github.com/abseil/abseil-cpp/tags
+         image: &s2_image
+            example/project:s2
+
+      example:
+         build:
+            context: .
+            dockerfile: example.Dockerfile
+            args:
+               S2_IMAGE: *s2_image
+         image: example/project:example
+
+========== ======================= ====
+Name       S2 Geometry
+Output dir ``/usr/local``
+Build Args ``BASE_IMAGE``          Base image to build the wheel in. Currently works in Debian instead of Alma
+..         ``PYTHON_VERSION``      Build python bindings for this python version
+..         ``ABSEIL_VERSION``      Abseil version to build from source
+..         ``S2GEOMETRY_VERSION``  S2 Geometry version to build from source
+========== ======================= ====
+
+Compiles S2 Geometry wheel for use in python.
+
+.. code-block:: Dockerfile
+
+   # global arguments
+   ARG S2_IMAGE
+   FROM ${S2_IMAGE} AS s2
+
+   FROM some_image
+
+   ...
+
+   COPY --from=s2 /usr/local /usr/local
+
+   RUN pip install /usr/local/share/just/wheels/*
+   # Or using pip-tools, add "--find-links /usr/local/share/just/wheels" to requirements.in
+
+.. code-block:: example.py
+
+    import s2Geometry as s2
+
+    ll = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
+    print(s2.S2CellId(ll).ToToken())
+
 pybind11 bindings for glog
 --------------------------
 

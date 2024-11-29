@@ -36,6 +36,18 @@ services:
     image: vsiri/blueprint:pdal
 
   # Example
+  s2:
+    build:
+      context: .
+      dockerfile: blueprint_s2geometry.Dockerfile
+      # args:
+      #   BASE_IMAGE="${BASE_IMAGE}"
+      #   ABSEIL_VERSION="${ABSEIL_VERSION}"
+      #   S2GEOMETRY_VERSION="${S2GEOMETRY_VERSION}"
+      #   PYTHON_VERSION="${PYTHON_VERSION}"
+    image: vsiri/blueprint:s2
+
+  # Example
   glog:
     build:
       context: .

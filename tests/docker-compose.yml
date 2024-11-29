@@ -6,6 +6,9 @@ x-args:
   NUMPY_VERSION: &numpy_version "1.21.4"
   LIBUNWIND_VERSION: &libunwind_version "v1.6.2"
   GLOG_VERSION: &glog_version "v0.7.1"
+  S2_ABSEIL_VERSION: &s2_absl_version "20240722.0"
+  S2_GEOMETRY_VERSION: &s2_s2_version "v0.11.1"
+  S2_PYTHON_VERSION: &s2_python_version "3.10.15"
 
 services:
 
@@ -30,6 +33,16 @@ services:
         PYTHON_VERSION: *python_version
         NUMPY_VERSION: *numpy_version
     image: &pdal_image vsiri/blueprint_test:pdal
+
+  s2:
+    build:
+      context: ..
+      dockerfile: blueprint_s2geometry.Dockerfile
+      args:
+        ABSEIL_VERSION:     *s2_absl_version
+        S2GEOMETRY_VERSION: *s2_s2_version
+        PYTHON_VERSION:     *s2_python_version
+    image: &s2_image vsiri/blueprint_test:s2
 
   glog:
     build:
@@ -61,6 +74,15 @@ services:
         PYTHON_VERSION: *python_version
         NUMPY_VERSION: *numpy_version
     image: vsiri/blueprint_test:test_pdal
+
+  test_s2:
+    build:
+      context: .
+      dockerfile: test_s2geometry.Dockerfile
+      args:
+        S2_IMAGE: *s2_image
+        PYTHON_VERSION: *s2_python_version
+    image: vsiri/blueprint_test:test_s2
 
   test_glog:
     build:

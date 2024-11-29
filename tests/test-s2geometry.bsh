@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+if [ -z "${VSI_COMMON_DIR+set}" ]; then
+  VSI_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.."; pwd)"
+fi
+
+source "${VSI_COMMON_DIR}/tests/testlib.bsh"
+source "${VSI_COMMON_DIR}/tests/test_utils.bsh"
+
+: ${DOCKER=docker}
+
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "s2"
+(
+  setup_test
+
+  DOCKER_IMAGE="vsiri/blueprint_test:test_s2"
+
+  RESULT=$("${DOCKER}" run --rm "${DOCKER_IMAGE}" /venv/bin/python -c "import s2geometry as s2; \
+    print(s2.S2CellId(s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)).ToToken())")
+
+  assert_str_eq "${RESULT}" "487604c489f841c3"
+)
+end_test
