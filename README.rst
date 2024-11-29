@@ -191,7 +191,7 @@ SWIG bindings for S2Geometry
 
    services:
 
-      glog:
+      s2:
          build:
             context: "${VSI_COMMON_DIR}/docker/blueprints"
             dockerfile: blueprint_s2geometry.Dockerfile
@@ -212,7 +212,7 @@ SWIG bindings for S2Geometry
             context: .
             dockerfile: example.Dockerfile
             args:
-               GLOG_IMAGE: *s2_image
+               S2_IMAGE: *s2_image
          image: example/project:example
 
 ========== ======================= ====
@@ -247,7 +247,6 @@ Compiles S2 Geometry wheel for use in python.
 
     ll = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
     print(s2.S2CellId(ll).ToToken())
-
 
 pybind11 bindings for glog
 --------------------------

@@ -80,7 +80,7 @@ services:
       context: .
       dockerfile: test_s2geometry.Dockerfile
       args:
-        GLOG_IMAGE: *s2_image
+        S2_IMAGE: *s2_image
         PYTHON_VERSION: *s2_python_version
     image: vsiri/blueprint_test:test_s2
 
