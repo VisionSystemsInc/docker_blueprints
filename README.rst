@@ -218,7 +218,7 @@ SWIG bindings for S2Geometry
 ========== ======================= ====
 Name       S2 Geometry
 Output dir ``/usr/local``
-Build Args ``BASE_IMAGE``          Base image to build the wheel in. Currenylt works in Debian instead of Alma
+Build Args ``BASE_IMAGE``          Base image to build the wheel in. Currently works in Debian instead of Alma
 ..         ``PYTHON_VERSION``      Build python bindings for this python version
 ..         ``ABSEIL_VERSION``      Abseil version to build from source
 ..         ``S2GEOMETRY_VERSION``  S2 Geometry version to build from source
