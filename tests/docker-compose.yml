@@ -1,5 +1,5 @@
 x-args:
-  GDAL_VERSION: &gdal_version "3.2.3"
+  GDAL_VERSION: &gdal_version "3.5.2"
   PDAL_VERSION: &pdal_version "2.2.0"
   PDAL_PYTHON_VERSION: &pdal_python_version "3.0.2"
   PYTHON_VERSION: &python_version "3.9"
