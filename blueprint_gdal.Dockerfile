@@ -343,7 +343,6 @@ RUN \
     mkdir build; cd build; \
     cmake .. \
         -D CMAKE_BUILD_TYPE=Release \
-        -D CMAKE_INSTALL_PREFIX="${STAGING_DIR}/usr/local" \
         -D BUILD_PYTHON_BINDINGS=OFF \
         -D GDAL_USE_PCRE=OFF \
         -D CMAKE_POLICY_DEFAULT_CMP0144=NEW \
@@ -354,7 +353,7 @@ RUN \
         -D GEOTIFF_ROOT="${STAGING_DIR}/usr/local" \
         | tee "${REPORT_DIR}/gdal_configure"; \
     cmake --build . -j$(nproc); \
-    cmake --install .; \
+    make install DESTDIR="${STAGING_DIR}"; \
     echo "${GDAL_VERSION}" > "${REPORT_DIR}/gdal_version"; \
     #
     # cleanup
