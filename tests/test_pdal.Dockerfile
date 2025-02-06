@@ -18,8 +18,10 @@ ARG NUMPY_VERSION
 COPY --from=gdal /usr/local /usr/local
 COPY --from=pdal /usr/local /usr/local
 
-# Only needs to be run once for all blueprints/recipes
+# access to lib64 packages
 ENV LD_LIBRARY_PATH="/usr/local/lib64"
+
+# Only needs to be run once for all blueprints/recipes
 RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
 
 # install numpy first, then pdal from wheel
