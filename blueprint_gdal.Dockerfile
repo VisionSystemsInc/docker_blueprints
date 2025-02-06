@@ -297,7 +297,9 @@ RUN \
 FROM base AS setup
 
 # version argument
-ARG GDAL_VERSION=3.3.3
+# note cmake build system used here was introduced in 3.5.0
+# https://github.com/OSGeo/gdal/releases/tag/v3.5.0
+ARG GDAL_VERSION=3.5.0
 ENV GDAL_VERSION=$GDAL_VERSION
 
 # additional build dependencies
@@ -330,39 +332,28 @@ COPY --from=tiff ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=proj ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=geotiff ${STAGING_DIR} ${STAGING_DIR}
 
-# local dependencies to /usr/local
-# This is necessary only for those dependencies expected to be in a "normal"
-# location. GDAL "configure" accepts direct paths for many packages, including
-# ECW and PROJ.
-COPY --from=openjpeg ${STAGING_DIR}/usr/local /usr/local
-COPY --from=geos ${STAGING_DIR}/usr/local /usr/local
-
-# add staged libraries
-ENV LD_LIBRARY_PATH="${STAGING_DIR}/usr/local/lib"
-
 # configure, build, & install
 # https://raw.githubusercontent.com/OSGeo/gdal/master/gdal/configure
 RUN \
     # versions from file
     function get_version() { cat "${REPORT_DIR}/${1}_version" 2>/dev/null || echo ""; }; \
     ECW_VERSION=$(get_version ecw); \
-    # configure
-    ./configure \
-        --without-libtool \
-        --with-hide-internal-symbols \
-        --with-jpeg=internal \
-        --with-png=internal \
-        --with-pcre=no \
-        --with-libtiff="${STAGING_DIR}/usr/local" \
-        --with-geotiff="${STAGING_DIR}/usr/local" \
-        --with-openjpeg \
-        --with-proj="${STAGING_DIR}/usr/local" \
-        ${ECW_VERSION:+--with-ecw="${STAGING_DIR}/usr/local/ecw"} \
-        | tee "${REPORT_DIR}/gdal_configure"; \
     #
-    # build & install
-    make -j "$(nproc)"; \
-    make install "DESTDIR=${STAGING_DIR}"; \
+    # configure, build, & install
+    mkdir build; cd build; \
+    cmake .. \
+        -D CMAKE_BUILD_TYPE=Release \
+        -D BUILD_PYTHON_BINDINGS=OFF \
+        -D GDAL_USE_PCRE=OFF \
+        -D CMAKE_POLICY_DEFAULT_CMP0144=NEW \
+        -D OPENJPEG_ROOT="${STAGING_DIR}/usr/local" \
+        ${ECW_VERSION:+-D ECW_ROOT="${STAGING_DIR}/usr/local/ecw"} \
+        -D TIFF_ROOT="${STAGING_DIR}/usr/local" \
+        -D PROJ_ROOT="${STAGING_DIR}/usr/local" \
+        -D GEOTIFF_ROOT="${STAGING_DIR}/usr/local" \
+        | tee "${REPORT_DIR}/gdal_configure"; \
+    cmake --build . -j$(nproc); \
+    make install DESTDIR="${STAGING_DIR}"; \
     echo "${GDAL_VERSION}" > "${REPORT_DIR}/gdal_version"; \
     #
     # cleanup
