@@ -28,5 +28,14 @@ begin_test "GDAL"
   # test python import (for example, gdal_array may fail to import if numpy is not installed)
   docker run --rm ${DOCKER_IMAGE} python -c 'from osgeo import gdal, ogr, osr, gdal_array, gdalconst'
 
+  # test for expected LDD results
+  RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'ldd /usr/local/lib64/libgdal.so | grep /usr/local')"
+  [[ ${RESULT} == */usr/local/lib64/libgeos.so* ]]
+  [[ ${RESULT} == */usr/local/lib64/libgeos_c.so* ]]
+  [[ ${RESULT} == */usr/local/lib/libgeotiff.so* ]]
+  [[ ${RESULT} == */usr/local/lib/libopenjp2.so* ]]
+  [[ ${RESULT} == */usr/local/lib/libproj.so* ]]
+  [[ ${RESULT} == */usr/local/lib/libtiff.so* ]]
+
 )
 end_test
