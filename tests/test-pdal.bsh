@@ -29,7 +29,7 @@ begin_test "PDAL"
   # Note this version is purposefully different from the default blueprint_gdal
   # GDAL_VERSION to ensure the chained blueprints honor all version ARGs
   RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'gdalinfo --version')"
-  [ "${RESULT}" = 'GDAL 3.5.2, released 2022/09/02' ]
+  [ "${RESULT}" = 'GDAL 3.6.4, released 2023/04/17' ]
 
 )
 end_test
