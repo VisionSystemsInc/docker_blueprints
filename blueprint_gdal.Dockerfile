@@ -1,7 +1,7 @@
-# CentOS 7 with GDAL 3+
+# CentOS 7 with GDAL 3.5+
 # - includes OPENJPEG 2.4, ECW J2K 5.5, libtiff4.3, libgeotiff 1.7, PROJ v8
 # - compatible with pypi GDAL bindings (recipe does not build python bindings)
-# - recipe is not currently compatible with GDAL 2.
+# - recipe is only compatible with GDAL 3.5+ using the cmake build system
 #
 # This dockerfile follows procedures from the offical GDAL dockers
 #   https://github.com/OSGeo/gdal/tree/master/gdal/docker
@@ -158,11 +158,11 @@ RUN \
     mkdir build; cd build; \
     cmake .. \
         -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX="${STAGING_DIR}/usr/local" \
         -DBUILD_DOCUMENTATION=OFF \
+        -DBUILD_TESTING=OFF \
         | tee "${REPORT_DIR}/geos_configure"; \
     cmake --build . -j$(nproc); \
-    cmake --install .; \
+    make install DESTDIR="${STAGING_DIR}"; \
     echo "${GEOS_VERSION}" > "${REPORT_DIR}/geos_version"; \
     #
     # cleanup
@@ -234,7 +234,6 @@ RUN \
     # configure, build, & install
     mkdir build; cd build; \
     cmake .. \
-        -DCMAKE_INSTALL_PREFIX="${STAGING_DIR}/usr/local" \
         -DCMAKE_INSTALL_LIBDIR="lib" \
         -DBUILD_SHARED_LIBS=ON \
         -DCMAKE_BUILD_TYPE=Release \
@@ -242,7 +241,7 @@ RUN \
         -DBUILD_TESTING:BOOL=OFF \
         | tee "${REPORT_DIR}/proj_configure"; \
     cmake --build . -j$(nproc); \
-    cmake --install .; \
+    make install DESTDIR="${STAGING_DIR}"; \
     echo "${PROJ_VERSION}" > "${REPORT_DIR}/proj_version"; \
     #
     # cleanup
@@ -332,6 +331,10 @@ COPY --from=tiff ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=proj ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=geotiff ${STAGING_DIR} ${STAGING_DIR}
 
+# GDAL FindGEOS.cmake requires GEOS at its final /usr/local location
+# https://github.com/OSGeo/gdal/blob/master/cmake/modules/packages/FindGEOS.cmake
+COPY --from=geos ${STAGING_DIR}/usr/local /usr/local
+
 # configure, build, & install
 # https://raw.githubusercontent.com/OSGeo/gdal/master/gdal/configure
 RUN \
@@ -378,14 +381,6 @@ COPY --from=library ${STAGING_DIR}/usr/local /usr/local
 
 # build wheels
 RUN mkdir -p "${WHEEL_DIR}"; \
-    # SWIG directory
-    SWIG_DIR="$(find . -type d -name 'swig' | head -n 1)"; \
-    #
-    # test for "use_2to3" in setup.py which requires older setuptools
-    # https://github.com/OSGeo/gdal/issues/4467#issuecomment-916676916
-    if grep -q 'use_2to3' "${SWIG_DIR}/python/setup.py"; then \
-        SETUPTOOLS_DEP="setuptools<58"; \
-    fi; \
     #
     # python flavor
     PYBIN=$(ver=$(echo ${PYTHON_VERSION} | sed -E 's|(.)\.([^.]*).*|\1\2|'); \
@@ -395,12 +390,11 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     # Note pyproj incompatibility with cython 3+
     # https://github.com/pyproj4/pyproj/issues/1321
     "${PYBIN}/pip" install \
-        ${SETUPTOOLS_DEP:-} \
         "cython<3" \
         numpy==${NUMPY_VERSION}; \
     #
     # build gdal wheel
-    "${PYBIN}/pip" wheel "${SWIG_DIR}/python" \
+    "${PYBIN}/pip" wheel gdal==${GDAL_VERSION} --no-binary gdal \
         --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
     #
     # build pyproj wheel

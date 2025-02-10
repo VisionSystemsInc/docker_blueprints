@@ -220,7 +220,9 @@ RUN mkdir -p "${WHEEL_DIR}"; \
         ninja \
         numpy==${NUMPY_VERSION} \
         pybind11[global] \
-        scikit-build; \
+        scikit-build \
+        scikit-build-core \
+        ; \
     #
     # build wheel
     # Note $PYBIN is added to the path to allow cmake (used during the build
