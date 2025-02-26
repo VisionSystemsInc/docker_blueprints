@@ -395,13 +395,16 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     #
     # build gdal wheel
     "${PYBIN}/pip" wheel gdal==${GDAL_VERSION} --no-binary gdal \
-        --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
+        --no-deps --no-build-isolation; \
     #
     # build pyproj wheel
     # While this project already provides manylinux wheels on pypi, building
     # pyproj here ensures the wheel uses the installed libproj & PROJ_VERSION
     "${PYBIN}/pip" wheel pyproj==${PYPROJ_VERSION} --no-binary pyproj \
-        --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
+        --no-deps --no-build-isolation; \
+    #
+    # repair the wheels
+    auditwheel repair *.whl -w "${WHEEL_DIR}"; \
     #
     # cleanup
     rm -rf /tmp/*; \

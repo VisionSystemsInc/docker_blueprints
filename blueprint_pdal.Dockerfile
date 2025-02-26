@@ -228,8 +228,10 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     # Note $PYBIN is added to the path to allow cmake (used during the build
     # process) to identify the correct python version
     PATH="${PYBIN}:$PATH"; \
-    "${PYBIN}/pip" wheel . \
-        --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
+    "${PYBIN}/pip" wheel . --no-deps --no-build-isolation; \
+    #
+    # repair the wheel
+    auditwheel repair *.whl -w "${WHEEL_DIR}"; \
     #
     # cleanup
     rm -rf /tmp/*; \
