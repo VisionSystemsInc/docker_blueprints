@@ -11,15 +11,15 @@ source "${VSI_COMMON_DIR}/tests/testlib.bsh"
 if ! command -v "${DOCKER}" &> /dev/null; then
   skip_next_test
 fi
-begin_test "glog"
+begin_test "nglog"
 (
   setup_test
 
-  DOCKER_IMAGE="vsiri/blueprint_test:test_glog"
+  DOCKER_IMAGE="vsiri/blueprint_test:test_nglog"
 
-  RESULT=$("${DOCKER}" run --rm "${DOCKER_IMAGE}" /venv/bin/python -c "import pyglog; \
-    pyglog.initGoogleLogging('ok'); \
-    pyglog.installFailureSignalHandler(); \
+  RESULT=$("${DOCKER}" run --rm "${DOCKER_IMAGE}" /venv/bin/python -c "import nglog; \
+    nglog.InitializeLogging('ok'); \
+    nglog.installFailureSignalHandler(); \
     import os; \
     os.kill(os.getpid(), 15)" 2>&1)
 
@@ -28,7 +28,7 @@ begin_test "glog"
 #   PC: @     0x7fab0cc5b267 kill
 #   *** SIGTERM (@0x1) received by PID 1 (TID 0x7fab0d1eab80) from PID 1; stack trace: ***
 #       @     0x7fab0ccacfa7 (/usr/lib/x86_64-linux-gnu/libc.so.6+0x8dfa6)
-#       @     0x7fab0c968e88 google::(anonymous namespace)::FailureSignalHandler(int, siginfo_t*, void*)
+#       @     0x7fab0c968e88 nglog::(anonymous namespace)::FailureSignalHandler(int, siginfo_t*, void*)
 #       @     0x7fab0cc5b050 (/usr/lib/x86_64-linux-gnu/libc.so.6+0x3c04f)
 #       @     0x7fab0cc5b267 kill
 #       @     0x7fab0cf2a6c7 os_kill

@@ -13,8 +13,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # For future use
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    # Some fixes for the Glog library.
-    add_definitions("-DGLOG_NO_ABBREVIATED_SEVERITIES")
+    # Some fixes for the ng-log library.
+    add_definitions("-DNGLOG_NO_ABBREVIATED_SEVERITIES")
     add_definitions("-DGL_GLEXT_PROTOTYPES")
     add_definitions("-DNOMINMAX")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
@@ -27,17 +27,15 @@ endif()
 # scikit-build-core's built-in backport)
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
-# set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/pyglog/cmake")
-# find_package(glog REQUIRED)
-find_package(glog 0.7.1 REQUIRED)
-# find_package(gflags REQUIRED CONFIG)
+# set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "/nglog/cmake")
+find_package(ng-log 0.8.0 REQUIRED)
 
-pybind11_add_module(pyglog py_glog.cpp WITH_SOABI)
+pybind11_add_module(nglog py_nglog.cpp WITH_SOABI)
 
 # This is passing in the version as a #define
-target_compile_definitions(pyglog PRIVATE VERSION_INFO=\"${PROJECT_VERSION}\")
+target_compile_definitions(nglog PRIVATE VERSION_INFO=\"${PROJECT_VERSION}\")
 
-target_link_libraries(pyglog PRIVATE glog::glog pybind11::headers)
+target_link_libraries(nglog PRIVATE ng-log::ng-log pybind11::headers)
 
 # The install directory is the output (wheel) directory
-install(TARGETS pyglog LIBRARY DESTINATION .)
+install(TARGETS nglog LIBRARY DESTINATION .)

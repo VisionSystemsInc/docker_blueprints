@@ -248,73 +248,73 @@ Compiles S2 Geometry wheel for use in python.
     ll = s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)
     print(s2.S2CellId(ll).ToToken())
 
-pybind11 bindings for glog
---------------------------
+pybind11 bindings for ng-log
+----------------------------
 
 .. code-block:: yaml
 
    services:
 
-      glog:
+      nglog:
          build:
             context: "${VSI_COMMON_DIR}/docker/blueprints"
-            dockerfile: blueprint_glog.Dockerfile
+            dockerfile: blueprint_nglog.Dockerfile
             args:
-               # GLOG_VERSION: "v0.7.1"
-               # https://github.com/google/glog/tags
+               # NGLOG_VERSION: "v0.8.0"
+               # https://github.com/ng-log/ng-log/tags
                # PYTHON_VERSION: "3.8.12"
                # https://github.com/pypa/manylinux/blob/main/docker/Dockerfile
                # BASE_IMAGE: "quay.io/pypa/manylinux_2_28_x86_64"
                # https://quay.io/repository/pypa/manylinux_2_28_x86_64?tab=tags&tag=latest
-               # LIBUNWIND_VERSION: "v1.6.2"
+               # LIBUNWIND_VERSION: "v1.8.2"
                # https://github.com/libunwind/libunwind/tags
-         image: &glog_image
-            example/project:glog
+         image: &nglog_image
+            example/project:nglog
 
       example:
          build:
             context: .
             dockerfile: example.Dockerfile
             args:
-               GLOG_IMAGE: *glog_image
+               NGLOG_IMAGE: *nglog_image
          image: example/project:example
 
 
 ========== ======================= ====
-Name       Google Logging
+Name       ng-log
 Output dir ``/usr/local``
 Build Args ``BASE_IMAGE``          Base image to build the wheel in. Default: `quay.io/pypa/manylinux_2_28_x86_64`
 ..         ``PYTHON_VERSION``      Build python bindings for this python version
 ..         ``LIBUNWIND_VERSION``   LibUnwind version to build from source
-..         ``GLOG_VERSION``        Glog version to build from source
+..         ``NGLOG_VERSION``       ng-log version to build from source
 ========== ======================= ====
 
-Compiles glog wheel for use in python. This is primarily to setup [Failure Signal Handlers](https://google.github.io/glog/0.7.1/failures/).
+Compiles ng-log wheel for use in python. This is primarily to setup [Failure Signal Handlers](https://ng-log.github.io/ng-log/0.8.0/failures/).
 
 .. code-block:: Dockerfile
 
    # global arguments
-   ARG GLOG_IMAGE
-   FROM ${GLOG_IMAGE} AS glog
+   ARG NGLOG_IMAGE
+   FROM ${NGLOG_IMAGE} AS nglog
 
    FROM some_image
 
    ...
 
-   COPY --from=glog /usr/local /usr/local
+   COPY --from=nglog /usr/local /usr/local
 
    RUN pip install /usr/local/share/just/wheels/*
    # Or using pip-tools, add "--find-links /usr/local/share/just/wheels" to requirements.in
 
 .. code-block:: example.py
 
-    import pyglog
+    import nglog
 
-    pyglog.initGoogleLogging("programName")
-    pyglog.installFailureSignalHandler()
+    nglog.InitializeLogging("programName")
+    nglog.installFailureSignalHandler()
 
 ---------------------
 Blueprint maintenance
 ---------------------
 
-To update build dependencies: `docker compose run -f maintenance.yml--rm glog-compile`
+To update build dependencies: `docker compose run -f maintenance.yml--rm nglog-compile`
