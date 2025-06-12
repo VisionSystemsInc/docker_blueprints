@@ -18,7 +18,7 @@ begin_test "nglog"
   DOCKER_IMAGE="vsiri/blueprint_test:test_nglog"
 
   RESULT=$("${DOCKER}" run --rm "${DOCKER_IMAGE}" /venv/bin/python -c "import nglog; \
-    nglog.InitializeLogging('ok'); \
+    nglog.initializeLogging('ok'); \
     nglog.installFailureSignalHandler(); \
     import os; \
     os.kill(os.getpid(), 15)" 2>&1)
