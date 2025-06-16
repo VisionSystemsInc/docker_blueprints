@@ -152,7 +152,7 @@ jobs:
           command: |
 
             # discover blueprints
-            SERVICES=( gdal pdal glog s2 )
+            SERVICES=( gdal pdal nglog s2 )
 
             # ci_load for each blueprint
             for service in "${SERVICES[@]}"; do
@@ -178,7 +178,7 @@ jobs:
           command: |
 
             # named services
-            SERVICES=( gdal pdal glog s2 )
+            SERVICES=( gdal pdal nglog s2 )
 
             # ci_load for each service, including default blueprint cache
             for service in "${SERVICES[@]}"; do
@@ -194,7 +194,7 @@ jobs:
           command: |
 
             # named services
-            SERVICES=( test_gdal test_pdal test_glog test_s2 )
+            SERVICES=( test_gdal test_pdal test_nglog test_s2 )
 
             # ci_load for each service
             for service in "${SERVICES[@]}"; do

@@ -15,20 +15,20 @@ RUN git clone https://github.com/libunwind/libunwind.git /libunwind; \
     make install; \
     cd /
 
-ARG GLOG_VERSION=v0.7.1
+ARG NGLOG_VERSION=v0.8.0
 
-RUN git clone https://github.com/google/glog.git /glog; \
-    cd /glog; \
-    git checkout "${GLOG_VERSION}"; \
+RUN git clone https://github.com/ng-log/ng-log.git /nglog; \
+    cd /nglog; \
+    git checkout "${NGLOG_VERSION}"; \
     mkdir build; \
     cd build; \
     cmake .. -D CMAKE_BUILD_TYPE=Release; \
     make; \
     make install; \
     cd /; \
-    rm -r glog
+    rm -r /nglog
 
-COPY pyglog /pyglog
+COPY nglog /nglog
 
 ARG PYTHON_VERSION=3.8.12
 
@@ -41,13 +41,13 @@ RUN curl -L https://github.com/mikefarah/yq/releases/download/v4.44.3/yq_linux_a
     echo /usr/local/lib64 > /etc/ld.so.conf.d/10-local.conf; \
     ldconfig; \
     # Dynamically set version
-    sed -i 's/^version = .*/version = "'"${GLOG_VERSION}"'"/' /pyglog/pyproject.toml; \
+    sed -i 's/^version = .*/version = "'"${NGLOG_VERSION}"'"/' /nglog/pyproject.toml; \
     # TODO: Add --no-deps --no-build-isolation, requirements.in, .txt, pip-tools, etc...
     "${python_dir}/bin/python" -m venv /tmp/venv; \
-    /tmp/venv/bin/pip install -r /pyglog/requirements${python_major}${python_minor}.txt; \
-    /tmp/venv/bin/pip wheel --no-deps --no-build-isolation /pyglog; \
-    auditwheel repair pyglog*cp"${python_major}${python_minor}"*.whl -w /usr/local/share/just/wheels; \
-    rm -r pyglog*cp"${python_major}${python_minor}"*.whl /tmp/venv
+    /tmp/venv/bin/pip install -r /nglog/requirements${python_major}${python_minor}.txt; \
+    /tmp/venv/bin/pip wheel --no-deps --no-build-isolation /nglog; \
+    auditwheel repair nglog*cp"${python_major}${python_minor}"*.whl -w /usr/local/share/just/wheels; \
+    rm -r nglog*cp"${python_major}${python_minor}"*.whl /tmp/venv
 
 FROM scratch
 

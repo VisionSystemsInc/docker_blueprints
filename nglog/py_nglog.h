@@ -2,18 +2,18 @@
 
 #include <pybind11/pybind11.h>
 
-#include <glog/logging.h>
+#include <ng-log/logging.h>
 
-// using namespace pyglog
+// using namespace nglog
 using namespace pybind11::literals;
 namespace py = pybind11;
 
 struct Logging {
   enum class LogSeverity {
-    GLOG_INFO = google::GLOG_INFO,
-    GLOG_WARNING = google::GLOG_WARNING,
-    GLOG_ERROR = google::GLOG_ERROR,
-    GLOG_FATAL = google::GLOG_FATAL,
+    INFO = nglog::INFO,
+    WARNING = nglog::WARNING,
+    ERROR = nglog::ERROR,
+    FATAL = nglog::FATAL,
   };
 };  // dummy class
 
@@ -25,14 +25,14 @@ std::pair<std::string, int> GetPythonCallFrame() {
   return std::make_pair(file + ":" + function, line);
 }
 
-void BindGlog11(py::module& m) {
+void BindNglog11(py::module& m) {
   py::class_<Logging> PyLogging(m, "logging", py::module_local());
 
   py::enum_<Logging::LogSeverity>(PyLogging, "Level")
-      .value("INFO", Logging::LogSeverity::GLOG_INFO)
-      .value("WARNING", Logging::LogSeverity::GLOG_WARNING)
-      .value("ERROR", Logging::LogSeverity::GLOG_ERROR)
-      .value("FATAL", Logging::LogSeverity::GLOG_FATAL)
+      .value("INFO", Logging::LogSeverity::INFO)
+      .value("WARNING", Logging::LogSeverity::WARNING)
+      .value("ERROR", Logging::LogSeverity::ERROR)
+      .value("FATAL", Logging::LogSeverity::FATAL)
       .export_values();
 
   PyLogging.def_readwrite_static("minloglevel", &FLAGS_minloglevel)
@@ -44,8 +44,8 @@ void BindGlog11(py::module& m) {
       .def_static(
           "set_log_destination",
           [](const Logging::LogSeverity severity, const std::string& path) {
-            google::SetLogDestination(
-                static_cast<google::LogSeverity>(severity), path.c_str());
+            nglog::SetLogDestination(
+                static_cast<nglog::LogSeverity>(severity), path.c_str());
           },
           "level"_a,
           "path"_a)
@@ -54,7 +54,7 @@ void BindGlog11(py::module& m) {
           [](const int level, const std::string& msg) {
             if (VLOG_IS_ON(level)) {
               const auto frame = GetPythonCallFrame();
-              google::LogMessage(frame.first.c_str(), frame.second).stream()
+              nglog::LogMessage(frame.first.c_str(), frame.second).stream()
                   << msg;
             }
           },
@@ -64,7 +64,7 @@ void BindGlog11(py::module& m) {
           "info",
           [](const std::string& msg) {
             const auto frame = GetPythonCallFrame();
-            google::LogMessage(frame.first.c_str(), frame.second).stream()
+            nglog::LogMessage(frame.first.c_str(), frame.second).stream()
                 << msg;
           },
           "message"_a)
@@ -72,8 +72,8 @@ void BindGlog11(py::module& m) {
           "warning",
           [](const std::string& msg) {
             const auto frame = GetPythonCallFrame();
-            google::LogMessage(
-                frame.first.c_str(), frame.second, google::GLOG_WARNING)
+            nglog::LogMessage(
+                frame.first.c_str(), frame.second, nglog::WARNING)
                     .stream()
                 << msg;
           },
@@ -82,8 +82,8 @@ void BindGlog11(py::module& m) {
           "error",
           [](const std::string& msg) {
             const auto frame = GetPythonCallFrame();
-            google::LogMessage(
-                frame.first.c_str(), frame.second, google::GLOG_ERROR)
+            nglog::LogMessage(
+                frame.first.c_str(), frame.second, nglog::ERROR)
                     .stream()
                 << msg;
           },
@@ -92,21 +92,21 @@ void BindGlog11(py::module& m) {
           "fatal",
           [](const std::string& msg) {
             const auto frame = GetPythonCallFrame();
-            google::LogMessageFatal(frame.first.c_str(), frame.second).stream()
+            nglog::LogMessageFatal(frame.first.c_str(), frame.second).stream()
                 << msg;
           },
           "message"_a);
 
-    m.def("initGoogleLogging",
+    m.def("initializeLogging",
           [](const std::string& name) {
             // Requires verion 0.6 or newer
-            if (!google::IsGoogleLoggingInitialized())
+            if (!nglog::IsLoggingInitialized())
             {
-              google::InitGoogleLogging(name.c_str());
+              nglog::InitializeLogging(name.c_str());
             }
           },
           py::arg("name") = std::string(""))
-      .def("installFailureSignalHandler", &google::InstallFailureSignalHandler);
+      .def("installFailureSignalHandler", &nglog::InstallFailureSignalHandler);
 
   FLAGS_alsologtostderr = true;
 }

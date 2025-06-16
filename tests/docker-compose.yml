@@ -4,8 +4,8 @@ x-args:
   PDAL_PYTHON_VERSION: &pdal_python_version "3.0.2"
   PYTHON_VERSION: &python_version "3.9"
   NUMPY_VERSION: &numpy_version "1.21.4"
-  LIBUNWIND_VERSION: &libunwind_version "v1.6.2"
-  GLOG_VERSION: &glog_version "v0.7.1"
+  LIBUNWIND_VERSION: &libunwind_version "v1.8.2"
+  NGLOG_VERSION: &nglog_version "v0.8.0"
   S2_ABSEIL_VERSION: &s2_absl_version "20240722.0"
   S2_GEOMETRY_VERSION: &s2_s2_version "v0.11.1"
   S2_PYTHON_VERSION: &s2_python_version "3.10.15"
@@ -44,15 +44,15 @@ services:
         PYTHON_VERSION:     *s2_python_version
     image: &s2_image vsiri/blueprint_test:s2
 
-  glog:
+  nglog:
     build:
       context: ..
-      dockerfile: blueprint_glog.Dockerfile
+      dockerfile: blueprint_nglog.Dockerfile
       args:
         PYTHON_VERSION: *python_version
         LIBUNWIND_VERSION: *libunwind_version
-        GLOG_VERSION: *glog_version
-    image: &glog_image vsiri/blueprint_test:glog
+        NGLOG_VERSION: *nglog_version
+    image: &nglog_image vsiri/blueprint_test:nglog
 
   test_gdal:
     build:
@@ -84,11 +84,11 @@ services:
         PYTHON_VERSION: *s2_python_version
     image: vsiri/blueprint_test:test_s2
 
-  test_glog:
+  test_nglog:
     build:
       context: .
-      dockerfile: test_glog.Dockerfile
+      dockerfile: test_nglog.Dockerfile
       args:
-        GLOG_IMAGE: *glog_image
+        NGLOG_IMAGE: *nglog_image
         PYTHON_VERSION: *python_version
-    image: vsiri/blueprint_test:test_glog
+    image: vsiri/blueprint_test:test_nglog

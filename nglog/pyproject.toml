@@ -3,9 +3,9 @@ requires = ["scikit-build-core>=0.3.3", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "pyglog"
-version = "0.7.1"
-description="Pybind11 wrapper for glog"
+name = "nglog"
+version = "0.8.0"
+description="Pybind11 wrapper for ng-log"
 readme = "README.md"
 authors = [
   { name = "Andy Neff", email = "andyneff@users.noreply.github.com" },

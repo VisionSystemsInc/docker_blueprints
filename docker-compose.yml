@@ -48,19 +48,19 @@ services:
     image: vsiri/blueprint:s2
 
   # Example
-  glog:
+  nglog:
     build:
       context: .
-      dockerfile: blueprint_glog.Dockerfile
+      dockerfile: blueprint_nglog.Dockerfile
       # args:
       #   BASE_IMAGE: "${BASE_IMAGE}"
       #   PYTHON_VERSION: "${PYTHON_VERSION}"
       #   LIBUNWIND_VERSION: "${LIBUNWIND_VERSION}"
-      #   GLOG_VERSION: "${GLOG_VERSION}"
-    image: vsiri/blueprint:glog
+      #   NGLOG_VERSION: "${NGLOG_VERSION}"
+    image: vsiri/blueprint:nglog
 
   # Maintanence
-  glog-compile:
+  nglog-compile:
     image: quay.io/pypa/manylinux_2_28_x86_64
     command: |
       bash -euxvc '
@@ -76,4 +76,4 @@ services:
     volumes:
       - type: bind
         target: /src
-        source: ./pyglog
+        source: ./nglog
