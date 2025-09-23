@@ -42,7 +42,12 @@ RUN python_major=${PYTHON_VERSION%%.*}; \
 # python build dependencies
 ARG TORCH_VERSION="2.1.2+cu118"
 RUN --mount=type=cache,target=/cache/pip,mode=0755 \
-    /venv/bin/pip3 install --extra-index-url https://download.pytorch.org/whl \
+    if [[ "${TORCH_VERSION}" != *"+cu"* ]]; then \
+      echo "TORCH_VERSION=${TORCH_VERSION} missing cuda identifier" >&2; \
+      exit 1; \
+    fi; \
+    torch_url="https://download.pytorch.org/whl/${TORCH_VERSION#*+}"; \
+    /venv/bin/pip3 install --extra-index-url ${torch_url} \
         "torch==${TORCH_VERSION}" "numpy<2" setuptools wheel;
 
 # build tinycudann wheel

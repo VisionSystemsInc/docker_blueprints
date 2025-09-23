@@ -32,8 +32,9 @@ RUN curl -fsSLo /mini.sh https://github.com/conda-forge/miniforge/releases/lates
 # python venv
 ARG TORCH_VERSION="2.1.2+cu118"
 RUN --mount=type=cache,target=/cache/pip,mode=0755 \
+    torch_url="https://download.pytorch.org/whl/${TORCH_VERSION#*+}"; \
     "/usr/local/bin/python" -m venv /venv; \
-    /venv/bin/pip3 install --extra-index-url https://download.pytorch.org/whl \
+    /venv/bin/pip3 install --extra-index-url ${torch_url} \
         "torch==${TORCH_VERSION}" "numpy<2";
 
 # tiny-cuda-nn
