@@ -9,6 +9,11 @@ x-args:
   S2_ABSEIL_VERSION: &s2_absl_version "20240722.0"
   S2_GEOMETRY_VERSION: &s2_s2_version "v0.11.1"
   S2_PYTHON_VERSION: &s2_python_version "3.10.15"
+  TINYCUDANN_CUDA_VERSION: &tinycudann_cuda_version "11.8.0"
+  TINYCUDANN_PYTHON_VERSION: &tinycudann_python_version "3.10.15"
+  TINYCUDANN_VERSION: &tinycudann_version "c91138bcd4c6877c8d5e60e483c0581aafc70cce"
+  TINYCUDANN_TCNN_CUDA_ARCHITECTURES: &tinycudann_tcnn_cuda_architectures "70,86"
+  TINYCUDANN_TORCH_VERSION: &tinycudann_torch_version "2.1.2+cu118"
 
 services:
 
@@ -54,6 +59,19 @@ services:
         NGLOG_VERSION: *nglog_version
     image: &nglog_image vsiri/blueprint_test:nglog
 
+  tinycudann:
+    build:
+      context: ..
+      dockerfile: blueprint_tinycudann.Dockerfile
+      args:
+        CUDA_VERSION: *tinycudann_cuda_version
+        PYTHON_VERSION: *tinycudann_python_version
+        TINYCUDANN_VERSION: *tinycudann_version
+        TCNN_CUDA_ARCHITECTURES: *tinycudann_tcnn_cuda_architectures
+        TORCH_KEEP_WHEEL: 1
+        TORCH_VERSION: *tinycudann_torch_version
+    image: &tinycudann_image vsiri/blueprint_test:tinycudann
+
   test_gdal:
     build:
       context: .
@@ -92,3 +110,14 @@ services:
         NGLOG_IMAGE: *nglog_image
         PYTHON_VERSION: *python_version
     image: vsiri/blueprint_test:test_nglog
+
+  test_tinycudann:
+    build:
+      context: .
+      dockerfile: test_tinycudann.Dockerfile
+      args:
+        CUDA_VERSION: *tinycudann_cuda_version
+        PYTHON_VERSION: *tinycudann_python_version
+        TINYCUDANN_IMAGE: *tinycudann_image
+        TORCH_VERSION: *tinycudann_torch_version
+    image: vsiri/blueprint_test:test_tinycudann
