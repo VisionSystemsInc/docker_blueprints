@@ -89,7 +89,6 @@ services:
       #   PYTHON_VERSION: "${PYTHON_VERSION}"
       #   TINYCUDANN_VERSION: "${TINYCUDANN_VERSION}"
       #   TCNN_CUDA_ARCHITECTURES: "${TCNN_CUDA_ARCHITECTURES}"
-      #   TORCH_KEEP_WHEEL: 1
       #   TORCH_VERSION: "${TORCH_VERSION}"
       #   VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
     image: vsiri/blueprint:tinycudann

@@ -333,8 +333,6 @@ Python bindings for tiny-cuda-nn
                # https://github.com/NVlabs/tiny-cuda-nn/tags
                # TCNN_CUDA_ARCHITECTURES: "70,86"
                # https://github.com/NVlabs/tiny-cuda-nn/blob/v2.0/bindings/torch/setup.py#L45-L47
-               # TORCH_KEEP_WHEEL: 1
-               # Keep (1) or delete (0) downloaded torch wheel
                # TORCH_VERSION: "2.1.2+cu118"
                # https://download.pytorch.org/whl/torch/
                # VSI_RECIPE_REPO: "vsiri/recipe"
@@ -358,14 +356,13 @@ Build Args ``BASE_IMAGE``                Base image to build the wheel in. Defau
 ..         ``PYTHON_VERSION``            Build tiny-cuda-nn for this python version
 ..         ``TINYCUDANN_VERSION``        tiny-cuda-nn version to build from source
 ..         ``TCNN_CUDA_ARCHITECTURES``   Build tiny-cuda-nn for these CUDA architectures
-..         ``TORCH_KEEP_WHEEL``          When set to ``1``, do not delete the downloaded torch wheel
 ..         ``TORCH_VERSION``             Build tiny-cuda-nn for this CUDA-enabled torch version
 ..         ``VSI_RECIPE_REPO``           VSI docker recipe repo
 ========== ============================= ====
 
 Compiles Tiny CUDA Neural Networks (tiny-cuda-nn) wheel for use in python. See [github repo](https://github.com/NVlabs/tiny-cuda-nn) for usage details.
 
-A container using the tinu-cuda-nn wheel must have installed appropriate versions of pytorch and CUDA.  Setting the tiny-cuda-nn blueprint argument ``TORCH_KEEP_WHEEL: 1`` lets users avoid re-download of the large torch wheel.
+A container using the tinu-cuda-nn wheel must have appropriate versions of pytorch and CUDA installed.
 
 .. code-block:: Dockerfile
 

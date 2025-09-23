@@ -68,7 +68,6 @@ services:
         PYTHON_VERSION: *tinycudann_python_version
         TINYCUDANN_VERSION: *tinycudann_version
         TCNN_CUDA_ARCHITECTURES: *tinycudann_tcnn_cuda_architectures
-        TORCH_KEEP_WHEEL: 1
         TORCH_VERSION: *tinycudann_torch_version
     image: &tinycudann_image vsiri/blueprint_test:tinycudann
 
