@@ -37,6 +37,22 @@ RUN python_major=${PYTHON_VERSION%%.*}; \
     git checkout "${S2GEOMETRY_VERSION}"; \
     # Temp patch for: https://github.com/google/s2geometry/pull/394/
     sed -Ei 's|(find_package\(Python3.*Development)\)|\1.Module)|' CMakeLists.txt; \
+    # version patches
+    if [ "${S2GEOMETRY_VERSION}" == "v0.11.0" ]; then \
+      # mislabeled as v0.11.0.dev1 in setup.cfg
+      sed -i 's|0.11.0.dev1|0.11.0|g' setup.cfg; \
+    elif [ "${S2GEOMETRY_VERSION}" == "v0.11.1" ]; then \
+      # mislabeled as v0.11.0.dev1 in setup.cfg
+      sed -i 's|0.11.0.dev1|0.11.1|g' setup.cfg; \
+    elif [ "${S2GEOMETRY_VERSION}" == "v0.12.0" ]; then \
+      # missing [tool.setuptools_scm] in pyproject.toml
+      # https://github.com/google/s2geometry/pull/451
+      echo '[tool.setuptools_scm]' >> "pyproject.toml"; \
+      # commit & retag to avoid "dev0" version by setuptools_scm
+      git add pyproject.toml; \
+      git -c user.name="foo" -c user.email="bar" commit -m "patch"; \
+      git tag -f "v0.12.0"; \
+    fi; \
     # https://github.com/diegoferigo/cmake-build-extension/blob/4bd5dab5c2e3eeaf5ed1b40d7aa159b83a1fb7c9/README.md?plain=1#L124
     "${python_dir}/bin/pip" install build; \
     "${python_dir}/bin/python" -m build --wheel \
