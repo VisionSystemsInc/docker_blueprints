@@ -1,13 +1,13 @@
-# CentOS 7 with PDAL
+# PDAL built with manylinux_2_28
 # - includes manually built dependencies LASZIP, LAZPERF, Nitro
-# - compatible with pypi PDAL bindings (recipe does not build python bindings)
 # - use must include the GDAL recipe in their dockerfile
+# - includes python bindings
 #
 # This dockerfile follows procedures from the offical PDAL dockers
 #   https://github.com/PDAL/PDAL/blob/2.3.0/scripts/docker/centos/Dockerfile
 #
-# This dockerfile is derived from the manylinux2014 base image, derived from
-# CentOS 7 and already containing many updated build essentials.
+# This dockerfile is derived from the manylinux_2_28 base image, derived from
+# AlmaLinux 8 and already containing many updated build essentials.
 #   https://github.com/pypa/manylinux
 #
 # As this base image includes build essentials already in /usr/local,
@@ -20,7 +20,7 @@
 # -----------------------------------------------------------------------------
 
 # global args
-ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2024-07-02-9ac04ee"
+ARG BASE_IMAGE="quay.io/pypa/manylinux_2_28_x86_64:2025.09.19-1"
 ARG GDAL_IMAGE="vsiri/blueprint:gdal"
 
 # blueprint dependencies
@@ -111,7 +111,10 @@ RUN \
     #
     # configure, build, & install
     cmake . \
-        -D CMAKE_BUILD_TYPE=Release; \
+        -D CMAKE_BUILD_TYPE=Release \
+        # Compatibility with CMake < 3.5 has been removed from CMake
+        -D CMAKE_POLICY_VERSION_MINIMUM=3.5 \
+        ; \
     make -j"$(nproc)"; \
     make install DESTDIR="${STAGING_DIR}"; \
     echo "${NITRO_VERSION}" > "${REPORT_DIR}/nitro_version"; \

@@ -1,22 +1,18 @@
-# CentOS 7 with GDAL 3.5+
-# - includes OPENJPEG 2.4, ECW J2K 5.5, libtiff4.3, libgeotiff 1.7, PROJ v8
-# - compatible with pypi GDAL bindings (recipe does not build python bindings)
+# GDAL 3.5+ built with manylinux_2_28
+# - includes manually built dependencies such as OpenJPEG, libgeos, libtiff,
+#   libgeotiff, and PROJ
 # - recipe is only compatible with GDAL 3.5+ using the cmake build system
+# - includes python bindings
 #
 # This dockerfile follows procedures from the offical GDAL dockers
 #   https://github.com/OSGeo/gdal/tree/master/gdal/docker
 #
-# This dockerfile is derived from the manylinux2014 base image, derived from
-# CentOS 7 and already containing many updated build essentials.
+# This dockerfile is derived from the manylinux_2_28 base image, derived from
+# AlmaLinux 8 and already containing many updated build essentials.
 #   https://github.com/pypa/manylinux
 #
-# In the future, the manylinux2014 image could enable a portable GDAL that
-# includes internal copies of necessary dependencies and python bindings
-# for a selected python version. This recipe currently does not build any
-# python bindings.
-#
 # As this base image includes build essentials already in /usr/local,
-# libraries are staged in "/gdal/usr/local".  The last build step clears
+# libraries are staged in "/staging/usr/local".  The last build step clears
 # /usr/local of other packages, then migrates the staging directory to
 # /usr/local for consistency with other recipes.
 
@@ -25,7 +21,7 @@
 # -----------------------------------------------------------------------------
 
 # global args
-ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2024-07-02-9ac04ee"
+ARG BASE_IMAGE="quay.io/pypa/manylinux_2_28_x86_64:2025.09.19-1"
 
 # base image
 FROM ${BASE_IMAGE} AS base
@@ -239,6 +235,7 @@ RUN \
         -DCMAKE_BUILD_TYPE=Release \
         -DENABLE_IPO=ON \
         -DBUILD_TESTING:BOOL=OFF \
+        -DCMAKE_PROGRAM_PATH="/opt/_internal/sqlite3/bin" \
         | tee "${REPORT_DIR}/proj_configure"; \
     cmake --build . -j$(nproc); \
     make install DESTDIR="${STAGING_DIR}"; \
@@ -381,6 +378,7 @@ COPY --from=library ${STAGING_DIR}/usr/local /usr/local
 
 # build wheels
 RUN mkdir -p "${WHEEL_DIR}"; \
+    ldconfig; \
     #
     # python flavor
     PYBIN=$(ver=$(echo ${PYTHON_VERSION} | sed -E 's|(.)\.([^.]*).*|\1\2|'); \
@@ -391,7 +389,8 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     # https://github.com/pyproj4/pyproj/issues/1321
     "${PYBIN}/pip" install \
         "cython<3" \
-        numpy==${NUMPY_VERSION}; \
+        numpy==${NUMPY_VERSION} \
+        setuptools; \
     #
     # build gdal wheel
     "${PYBIN}/pip" wheel gdal==${GDAL_VERSION} --no-binary gdal \
