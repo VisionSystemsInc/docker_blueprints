@@ -313,6 +313,77 @@ Compiles ng-log wheel for use in python. This is primarily to setup [Failure Sig
     nglog.InitializeLogging("programName")
     nglog.installFailureSignalHandler()
 
+Python bindings for tiny-cuda-nn
+--------------------------------
+
+.. code-block:: yaml
+
+   services:
+
+      tinycudann:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_tinycudann.Dockerfile
+            args:
+               # CUDA_VERSION: "11.8.0"
+               # https://hub.docker.com/r/nvidia/cuda/tags
+               # PYTHON_VERSION: "3.10.18"
+               # https://www.python.org/doc/versions/
+               # TINYCUDANN_VERSION: "v2.0"
+               # https://github.com/NVlabs/tiny-cuda-nn/tags
+               # TCNN_CUDA_ARCHITECTURES: "70,86"
+               # https://github.com/NVlabs/tiny-cuda-nn/blob/v2.0/bindings/torch/setup.py#L45-L47
+               # TORCH_VERSION: "2.1.2+cu118"
+               # https://download.pytorch.org/whl/torch/
+               # VSI_RECIPE_REPO: "vsiri/recipe"
+               # https://hub.docker.com/r/vsiri/recipe
+         image: &tinycudann_image
+            example/project:tinycudann
+
+      example:
+         build:
+            context: .
+            dockerfile: example.Dockerfile
+            args:
+               TINYCUDANN_IMAGE: *tinycudann_image
+         image: example/project:example
+
+========== ============================= ====
+Name       Tiny CUDA Neural Networks
+Output dir ``/usr/local``
+Build Args ``BASE_IMAGE``                Base image to build the wheel in. Defaults to latest ``manylinux_2_28_x86_64``
+..         ``CUDA_VERSION``              Build tiny-cuda-nn for this CUDA version
+..         ``PYTHON_VERSION``            Build tiny-cuda-nn for this python version
+..         ``TINYCUDANN_VERSION``        tiny-cuda-nn version to build from source
+..         ``TCNN_CUDA_ARCHITECTURES``   Build tiny-cuda-nn for these CUDA architectures
+..         ``TORCH_VERSION``             Build tiny-cuda-nn for this CUDA-enabled torch version
+..         ``VSI_RECIPE_REPO``           VSI docker recipe repo
+========== ============================= ====
+
+Compiles Tiny CUDA Neural Networks (tiny-cuda-nn) wheel for use in python. See [github repo](https://github.com/NVlabs/tiny-cuda-nn) for usage details.
+
+A container using the tinu-cuda-nn wheel must have appropriate versions of pytorch and CUDA installed.
+
+.. code-block:: Dockerfile
+
+   # global arguments
+   ARG TINYCUDANN_IMAGE
+   FROM ${TINYCUDANN_IMAGE} AS tinycudann
+
+   FROM some_image
+
+   ...
+
+   COPY --from=tinycudann /usr/local /usr/local
+
+   RUN pip install /usr/local/share/just/wheels/*
+   # Or using pip-tools, add "--find-links /usr/local/share/just/wheels" to requirements.in
+
+.. code-block:: example.py
+
+    import torch
+    import tinycudann
+
 ---------------------
 Blueprint maintenance
 ---------------------

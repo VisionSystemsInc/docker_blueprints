@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+if [ -z "${VSI_COMMON_DIR+set}" ]; then
+  VSI_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.."; pwd)"
+fi
+
+source "${VSI_COMMON_DIR}/tests/testlib.bsh"
+source "${VSI_COMMON_DIR}/tests/test_utils.bsh"
+
+: ${DOCKER=docker}
+
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "tinycudann"
+(
+  setup_test
+
+  DOCKER_IMAGE="vsiri/blueprint_test:test_tinycudann"
+
+  # test tinycudann_bindings import
+  function load_binding()
+  {
+    local cc="${1}"
+    local script="if True:
+      import torch
+      import tinycudann_bindings._${cc}_C
+      print('success-${cc}')
+    "
+    local opts=(
+      --rm
+      --env LD_LIBRARY_PATH='/usr/local/cuda-11.8/compat'
+      --entrypoint ""
+      "${DOCKER_IMAGE}"
+      /venv/bin/python -c "${script}"
+    )
+    local result="$("${DOCKER}" run "${opts[@]}")"
+    echo "${result}"
+  }
+
+  RESULT="$(load_binding 70)"
+  assert_str_eq "${RESULT}" "success-70"
+
+  RESULT="$(load_binding 86)"
+  assert_str_eq "${RESULT}" "success-86"
+)
+end_test

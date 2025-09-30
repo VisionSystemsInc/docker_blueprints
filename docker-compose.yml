@@ -77,3 +77,18 @@ services:
       - type: bind
         target: /src
         source: ./nglog
+
+  # Example
+  tinycudann:
+    build:
+      context: .
+      dockerfile: blueprint_tinycudann.Dockerfile
+      args:
+        # BASE_IMAGE: "${BASE_IMAGE}"
+        CUDA_VERSION: "11.8.0"
+        # PYTHON_VERSION: "${PYTHON_VERSION}"
+        # TINYCUDANN_VERSION: "${TINYCUDANN_VERSION}"
+        # TCNN_CUDA_ARCHITECTURES: "${TCNN_CUDA_ARCHITECTURES}"
+        # TORCH_VERSION: "${TORCH_VERSION}"
+        # VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
+    image: vsiri/blueprint:tinycudann
