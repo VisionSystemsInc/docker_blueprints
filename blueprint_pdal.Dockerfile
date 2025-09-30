@@ -1,7 +1,7 @@
-# CentOS 7 with PDAL
+# PDAL blueprint
 # - includes manually built dependencies LASZIP, LAZPERF, Nitro
-# - compatible with pypi PDAL bindings (recipe does not build python bindings)
 # - use must include the GDAL recipe in their dockerfile
+# - includes pdal-python as installable python wheel
 #
 # This dockerfile follows procedures from the offical PDAL dockers
 #   https://github.com/PDAL/PDAL/blob/2.3.0/scripts/docker/centos/Dockerfile
@@ -47,7 +47,7 @@ WORKDIR /tmp
 FROM base AS laszip
 
 # version argument
-ARG LASZIP_VERSION=3.4.3
+ARG LASZIP_VERSION=3.4.4
 
 # install
 RUN \
@@ -73,7 +73,7 @@ RUN \
 FROM base AS lazperf
 
 # version argument
-ARG LAZPERF_VERSION=2.1.0
+ARG LAZPERF_VERSION=3.4.0
 
 # install
 RUN \
@@ -100,7 +100,7 @@ RUN \
 FROM base AS nitro
 
 # version argument
-ARG NITRO_VERSION=2.7dev-6
+ARG NITRO_VERSION=2.7dev-8
 
 # install
 RUN \
@@ -126,7 +126,7 @@ RUN \
 FROM base AS setup
 
 # version argument
-ARG PDAL_VERSION=2.3.0
+ARG PDAL_VERSION=2.8.3
 ENV PDAL_VERSION=${PDAL_VERSION}
 
 # additional build dependencies
@@ -187,9 +187,9 @@ FROM setup AS wheel
 
 # version arguments
 # note pdal-python is hosted/versioned separately from PDAL
-ARG PDAL_PYTHON_VERSION=3.0.2
-ARG PYTHON_VERSION=3.9
-ARG NUMPY_VERSION=1.22.3
+ARG PDAL_PYTHON_VERSION=3.4.5
+ARG PYTHON_VERSION=3.10.18
+ARG NUMPY_VERSION=2.1.3
 
 # wheel directory
 ENV WHEEL_DIR="${STAGING_DIR}/usr/local/share/just/wheels"
