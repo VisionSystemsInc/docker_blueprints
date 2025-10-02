@@ -1,7 +1,7 @@
-# CentOS 7 with GDAL 3.5+
-# - includes OPENJPEG 2.4, ECW J2K 5.5, libtiff4.3, libgeotiff 1.7, PROJ v8
-# - compatible with pypi GDAL bindings (recipe does not build python bindings)
+# GDAL blueprint
+# - includes OPENJPEG, ECW J2K, libgeos, libtiff, PROJ, and libgeotiff
 # - recipe is only compatible with GDAL 3.5+ using the cmake build system
+# - includes GDAL python bindings and pyproj as installable python wheels
 #
 # This dockerfile follows procedures from the offical GDAL dockers
 #   https://github.com/OSGeo/gdal/tree/master/gdal/docker
@@ -10,13 +10,8 @@
 # CentOS 7 and already containing many updated build essentials.
 #   https://github.com/pypa/manylinux
 #
-# In the future, the manylinux2014 image could enable a portable GDAL that
-# includes internal copies of necessary dependencies and python bindings
-# for a selected python version. This recipe currently does not build any
-# python bindings.
-#
 # As this base image includes build essentials already in /usr/local,
-# libraries are staged in "/gdal/usr/local".  The last build step clears
+# libraries are staged in "/staging/usr/local".  The last build step clears
 # /usr/local of other packages, then migrates the staging directory to
 # /usr/local for consistency with other recipes.
 
@@ -47,7 +42,7 @@ WORKDIR /tmp
 FROM base AS openjpeg
 
 # version argument
-ARG OPENJPEG_VERSION=2.4.0
+ARG OPENJPEG_VERSION=2.5.2
 
 # install
 RUN \
@@ -60,7 +55,8 @@ RUN \
     cmake . \
         -DBUILD_SHARED_LIBS=ON \
         -DBUILD_STATIC_LIBS=OFF \
-        -DCMAKE_BUILD_TYPE=Release; \
+        -DCMAKE_BUILD_TYPE=Release \
+        | tee "${REPORT_DIR}/openjpeg_configure"; \
     make -j"$(nproc)"; \
     make install DESTDIR="${STAGING_DIR}"; \
     echo "${OPENJPEG_VERSION}" > "${REPORT_DIR}/openjpeg_version"; \
@@ -145,7 +141,7 @@ RUN \
 FROM base AS geos
 
 # version argument
-ARG GEOS_VERSION=3.11.0
+ARG GEOS_VERSION=3.13.0
 
 # install
 RUN \
@@ -176,7 +172,7 @@ RUN \
 FROM base AS tiff
 
 # version argument
-ARG TIFF_VERSION=4.3.0
+ARG TIFF_VERSION=4.7.0
 
 # additional build dependencies
 RUN ulimit -n 1024; \
@@ -211,7 +207,7 @@ RUN \
 FROM base AS proj
 
 # version argument
-ARG PROJ_VERSION=8.1.1
+ARG PROJ_VERSION=9.4.1
 
 # additional build dependencies
 RUN ulimit -n 1024; \
@@ -255,7 +251,7 @@ RUN \
 FROM base AS geotiff
 
 # version argument
-ARG GEOTIFF_VERSION=1.7.0
+ARG GEOTIFF_VERSION=1.7.3
 
 # additional build dependencies
 RUN ulimit -n 1024; \
@@ -298,7 +294,7 @@ FROM base AS setup
 # version argument
 # note cmake build system used here was introduced in 3.5.0
 # https://github.com/OSGeo/gdal/releases/tag/v3.5.0
-ARG GDAL_VERSION=3.5.0
+ARG GDAL_VERSION=3.9.3
 ENV GDAL_VERSION=$GDAL_VERSION
 
 # additional build dependencies
@@ -369,9 +365,9 @@ RUN \
 FROM setup AS wheel
 
 # version argument
-ARG PYTHON_VERSION=3.9
-ARG NUMPY_VERSION=1.22.3
-ARG PYPROJ_VERSION=3.3.0
+ARG PYTHON_VERSION=3.10.18
+ARG NUMPY_VERSION=2.1.3
+ARG PYPROJ_VERSION=3.7.0
 
 # wheel directory
 ENV WHEEL_DIR="${STAGING_DIR}/usr/local/share/just/wheels"

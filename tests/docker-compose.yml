@@ -1,19 +1,27 @@
 x-args:
-  GDAL_VERSION: &gdal_version "3.6.4"
-  PDAL_VERSION: &pdal_version "2.2.0"
-  PDAL_PYTHON_VERSION: &pdal_python_version "3.0.2"
-  PYTHON_VERSION: &python_version "3.9"
-  NUMPY_VERSION: &numpy_version "1.21.4"
-  LIBUNWIND_VERSION: &libunwind_version "v1.8.2"
-  NGLOG_VERSION: &nglog_version "v0.8.0"
-  S2_ABSEIL_VERSION: &s2_absl_version "20240722.0"
-  S2_GEOMETRY_VERSION: &s2_s2_version "v0.11.1"
-  S2_PYTHON_VERSION: &s2_python_version "3.10.15"
-  TINYCUDANN_CUDA_VERSION: &tinycudann_cuda_version "11.8.0"
-  TINYCUDANN_PYTHON_VERSION: &tinycudann_python_version "3.10.15"
-  TINYCUDANN_VERSION: &tinycudann_version "c91138bcd4c6877c8d5e60e483c0581aafc70cce"
-  TINYCUDANN_TCNN_CUDA_ARCHITECTURES: &tinycudann_tcnn_cuda_architectures "70,86"
-  TINYCUDANN_TORCH_VERSION: &tinycudann_torch_version "2.1.2+cu118"
+  gdal: &gdal_args
+    GDAL_VERSION: "3.10.3"
+    NUMPY_VERSION: &gdal_numpy_version "2.1.3"
+    PYTHON_VERSION: &gdal_python_version "3.10.18"
+  pdal: &pdal_args
+    PDAL_VERSION: "2.8.3"
+    PDAL_PYTHON_VERSION: "3.4.5"
+    NUMPY_VERSION: *gdal_numpy_version
+    PYTHON_VERSION: *gdal_python_version
+  nglog: &nglog_args
+    NGLOG_VERSION: "v0.8.0"
+    LIBUNWIND_VERSION: "v1.8.2"
+    PYTHON_VERSION: &nglog_python_version "3.9"
+  s2: &s2_args
+    S2GEOMETRY_VERSION: "v0.11.1"
+    ABSEIL_VERSION: "20240722.0"
+    PYTHON_VERSION: &s2_python_version "3.10.15"
+  tinycudann: &tinycudann_args
+    CUDA_VERSION: &tinycudann_cuda_version "11.8.0"
+    PYTHON_VERSION: &tinycudann_python_version "3.10.15"
+    TINYCUDANN_VERSION: "c91138bcd4c6877c8d5e60e483c0581aafc70cce"
+    TCNN_CUDA_ARCHITECTURES: "70,86"
+    TORCH_VERSION: &tinycudann_torch_version "2.1.2+cu118"
 
 services:
 
@@ -22,9 +30,7 @@ services:
       context: ..
       dockerfile: blueprint_gdal.Dockerfile
       args:
-        GDAL_VERSION: *gdal_version
-        PYTHON_VERSION: *python_version
-        NUMPY_VERSION: *numpy_version
+        <<: *gdal_args
     image: &gdal_image vsiri/blueprint_test:gdal
 
   pdal:
@@ -33,10 +39,7 @@ services:
       dockerfile: blueprint_pdal.Dockerfile
       args:
         GDAL_IMAGE: *gdal_image
-        PDAL_VERSION: *pdal_version
-        PDAL_PYTHON_VERSION: *pdal_python_version
-        PYTHON_VERSION: *python_version
-        NUMPY_VERSION: *numpy_version
+        <<: *pdal_args
     image: &pdal_image vsiri/blueprint_test:pdal
 
   s2:
@@ -44,9 +47,7 @@ services:
       context: ..
       dockerfile: blueprint_s2geometry.Dockerfile
       args:
-        ABSEIL_VERSION:     *s2_absl_version
-        S2GEOMETRY_VERSION: *s2_s2_version
-        PYTHON_VERSION:     *s2_python_version
+        <<: *s2_args
     image: &s2_image vsiri/blueprint_test:s2
 
   nglog:
@@ -54,9 +55,7 @@ services:
       context: ..
       dockerfile: blueprint_nglog.Dockerfile
       args:
-        PYTHON_VERSION: *python_version
-        LIBUNWIND_VERSION: *libunwind_version
-        NGLOG_VERSION: *nglog_version
+        <<: *nglog_args
     image: &nglog_image vsiri/blueprint_test:nglog
 
   tinycudann:
@@ -64,11 +63,7 @@ services:
       context: ..
       dockerfile: blueprint_tinycudann.Dockerfile
       args:
-        CUDA_VERSION: *tinycudann_cuda_version
-        PYTHON_VERSION: *tinycudann_python_version
-        TINYCUDANN_VERSION: *tinycudann_version
-        TCNN_CUDA_ARCHITECTURES: *tinycudann_tcnn_cuda_architectures
-        TORCH_VERSION: *tinycudann_torch_version
+        <<: *tinycudann_args
     image: &tinycudann_image vsiri/blueprint_test:tinycudann
 
   test_gdal:
@@ -77,8 +72,8 @@ services:
       dockerfile: test_gdal.Dockerfile
       args:
         GDAL_IMAGE: *gdal_image
-        PYTHON_VERSION: *python_version
-        NUMPY_VERSION: *numpy_version
+        PYTHON_VERSION: *gdal_python_version
+        NUMPY_VERSION: *gdal_numpy_version
     image: vsiri/blueprint_test:test_gdal
 
   test_pdal:
@@ -88,8 +83,8 @@ services:
       args:
         GDAL_IMAGE: *gdal_image
         PDAL_IMAGE: *pdal_image
-        PYTHON_VERSION: *python_version
-        NUMPY_VERSION: *numpy_version
+        PYTHON_VERSION: *gdal_python_version
+        NUMPY_VERSION: *gdal_numpy_version
     image: vsiri/blueprint_test:test_pdal
 
   test_s2:
@@ -107,7 +102,7 @@ services:
       dockerfile: test_nglog.Dockerfile
       args:
         NGLOG_IMAGE: *nglog_image
-        PYTHON_VERSION: *python_version
+        PYTHON_VERSION: *nglog_python_version
     image: vsiri/blueprint_test:test_nglog
 
   test_tinycudann:
@@ -115,8 +110,8 @@ services:
       context: .
       dockerfile: test_tinycudann.Dockerfile
       args:
+        TINYCUDANN_IMAGE: *tinycudann_image
         CUDA_VERSION: *tinycudann_cuda_version
         PYTHON_VERSION: *tinycudann_python_version
-        TINYCUDANN_IMAGE: *tinycudann_image
         TORCH_VERSION: *tinycudann_torch_version
     image: vsiri/blueprint_test:test_tinycudann

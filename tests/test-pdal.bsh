@@ -5,6 +5,7 @@ if [ -z "${VSI_COMMON_DIR+set}" ]; then
 fi
 
 source "${VSI_COMMON_DIR}/tests/testlib.bsh"
+source "${VSI_COMMON_DIR}/tests/test_utils.bsh"
 
 : ${DOCKER=docker}
 
@@ -19,17 +20,27 @@ begin_test "PDAL"
 
   # command line PDAL version
   RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'pdal --version' | sed -n 2p)"
-  [ "${RESULT}" = 'pdal 2.2.0 (git-version: Release)' ]
+  assert_str_eq "${RESULT}" "pdal 2.8.3 (git-version: Release)"
 
   # python PDAL version
   RESULT="$(docker run --rm ${DOCKER_IMAGE} python -c 'import pdal; print(pdal.info.version)')"
-  [ "${RESULT}" = '2.2.0' ]
+  assert_str_eq "${RESULT}" "2.8.3"
 
   # command line GDAL version
   # Note this version is purposefully different from the default blueprint_gdal
   # GDAL_VERSION to ensure the chained blueprints honor all version ARGs
   RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'gdalinfo --version')"
-  [ "${RESULT}" = 'GDAL 3.6.4, released 2023/04/17' ]
+  assert_str_eq "${RESULT}" "GDAL 3.10.3, released 2025/04/01"
+
+  # test for expected LDD results
+  RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'ldd /usr/local/lib64/libpdalcpp.so | grep /usr/local')"
+  assert_sub_str "${RESULT}" "libgdal.so"
+  assert_sub_str "${RESULT}" "libgeos.so"
+  assert_sub_str "${RESULT}" "libgeos_c.so"
+  assert_sub_str "${RESULT}" "libgeotiff.so"
+  assert_sub_str "${RESULT}" "libopenjp2.so"
+  assert_sub_str "${RESULT}" "libproj.so"
+  assert_sub_str "${RESULT}" "libtiff.so"
 
 )
 end_test

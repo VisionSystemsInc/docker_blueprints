@@ -26,4 +26,4 @@ RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/
 
 # install numpy first, then pdal from wheel
 RUN pip install numpy==${NUMPY_VERSION}; \
-    pip install /usr/local/share/just/wheels/PDAL*.whl;
+    pip install /usr/local/share/just/wheels/pdal*.whl;
