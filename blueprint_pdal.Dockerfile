@@ -20,7 +20,7 @@
 # -----------------------------------------------------------------------------
 
 # global args
-ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2024-07-02-9ac04ee"
+ARG BASE_IMAGE="quay.io/pypa/manylinux_2_28_x86_64:2025.09.28-1"
 ARG GDAL_IMAGE="vsiri/blueprint:gdal"
 
 # blueprint dependencies
@@ -36,6 +36,9 @@ SHELL ["/usr/bin/env", "/bin/bash", "-euxvc"]
 ENV STAGING_DIR="/staging"
 ENV REPORT_DIR="${STAGING_DIR}/usr/local/share/just/info"
 RUN mkdir -p "${STAGING_DIR}" "${REPORT_DIR}";
+
+# remove direct access to /opt/_internal/sqlite3
+RUN rm -f /usr/local/lib/pkgconfig/sqlite3.pc
 
 # working directory (for download, unpack, build, etc.)
 WORKDIR /tmp
@@ -111,7 +114,10 @@ RUN \
     #
     # configure, build, & install
     cmake . \
-        -D CMAKE_BUILD_TYPE=Release; \
+        -D CMAKE_BUILD_TYPE=Release \
+        # Compatibility with CMake < 3.5 has been removed from CMake
+        -D CMAKE_POLICY_VERSION_MINIMUM=3.5 \
+        ; \
     make -j"$(nproc)"; \
     make install DESTDIR="${STAGING_DIR}"; \
     echo "${NITRO_VERSION}" > "${REPORT_DIR}/nitro_version"; \
@@ -164,7 +170,7 @@ RUN \
     #
     # configure, build, & install
     cmake . \
-        -D CMAKE_PREFIX_PATH="${STAGING_DIR}/usr/local" \
+        -D CMAKE_PREFIX_PATH="${STAGING_DIR}/usr/local;/usr/local" \
         -D CMAKE_BUILD_TYPE=Release \
         -D WITH_LASZIP=ON \
         -D WITH_LAZPERF=ON \
