@@ -20,7 +20,7 @@
 # -----------------------------------------------------------------------------
 
 # global args
-ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2024-07-02-9ac04ee"
+ARG BASE_IMAGE="quay.io/pypa/manylinux_2_28_x86_64:2025.09.28-1"
 
 # base image
 FROM ${BASE_IMAGE} AS base
@@ -33,8 +33,34 @@ ENV STAGING_DIR="/staging"
 ENV REPORT_DIR="${STAGING_DIR}/usr/local/share/just/info"
 RUN mkdir -p "${STAGING_DIR}" "${REPORT_DIR}";
 
+# remove direct access to /opt/_internal/sqlite3
+RUN rm -f /usr/local/lib/pkgconfig/sqlite3.pc
+
 # working directory (for download, unpack, build, etc.)
 WORKDIR /tmp
+
+
+# -----------------------------------------------------------------------------
+# SQLITE3
+# -----------------------------------------------------------------------------
+# copy & adjust manylinux-built sqlite3
+#
+# The sqlite3 project decided to remove the SONAME from libsqlite3.so by
+# default, leaving SONAME details to packagers.
+# https://github.com/sqlite/sqlite/blob/version-3.50.4/autosetup/sqlite-config.tcl#L339-L346
+# Without an SONAME, dependent projects like libproj report an absolute file
+# path for libsqlite3.so and are no longer portable. We thus add back the
+# legacy SONAME and remove RUNPATH from the .so file via ``patchelf``.
+FROM base AS sqlite3
+
+RUN cp -r /opt/_internal/sqlite3/* "${STAGING_DIR}/usr/local"; \
+    # adjust pkg-config
+    PC="${STAGING_DIR}/usr/local/lib/pkgconfig/sqlite3.pc"; \
+    sed -i 's|^prefix=.*|prefix=/usr/local|g' "${PC}"; \
+    # adjust so file: remove RUNPATH and add legacy SONAME
+    SO="${STAGING_DIR}/usr/local/lib/libsqlite3.so"; \
+    patchelf --set-soname 'libsqlite3.so.0' --remove-rpath "${SO}";
+
 
 # -----------------------------------------------------------------------------
 # OPENJPEG v2
@@ -218,7 +244,8 @@ RUN ulimit -n 1024; \
     yum clean all
 
 # local dependencies to staging directory
-COPY --from=tiff ${STAGING_DIR}/usr/local /usr/local
+COPY --from=sqlite3 ${STAGING_DIR} ${STAGING_DIR}
+COPY --from=tiff ${STAGING_DIR} ${STAGING_DIR}
 
 # install
 RUN \
@@ -230,6 +257,7 @@ RUN \
     # configure, build, & install
     mkdir build; cd build; \
     cmake .. \
+        -DCMAKE_PREFIX_PATH="${STAGING_DIR}/usr/local" \
         -DCMAKE_INSTALL_LIBDIR="lib" \
         -DBUILD_SHARED_LIBS=ON \
         -DCMAKE_BUILD_TYPE=Release \
@@ -320,6 +348,7 @@ FROM setup AS library
 # local dependencies to staging directory
 # base manylinux image has many other dependencies already in /usr/local,
 # so we isolate packages in the staging directory
+COPY --from=sqlite3 ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=openjpeg ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=ecw ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=geos ${STAGING_DIR} ${STAGING_DIR}
@@ -327,29 +356,14 @@ COPY --from=tiff ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=proj ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=geotiff ${STAGING_DIR} ${STAGING_DIR}
 
-# GDAL FindGEOS.cmake requires GEOS at its final /usr/local location
-# https://github.com/OSGeo/gdal/blob/master/cmake/modules/packages/FindGEOS.cmake
-COPY --from=geos ${STAGING_DIR}/usr/local /usr/local
-
 # configure, build, & install
 # https://raw.githubusercontent.com/OSGeo/gdal/master/gdal/configure
-RUN \
-    # versions from file
-    function get_version() { cat "${REPORT_DIR}/${1}_version" 2>/dev/null || echo ""; }; \
-    ECW_VERSION=$(get_version ecw); \
-    #
-    # configure, build, & install
-    mkdir build; cd build; \
+RUN mkdir build; cd build; \
     cmake .. \
+        -D CMAKE_PREFIX_PATH="${STAGING_DIR}/usr/local" \
         -D CMAKE_BUILD_TYPE=Release \
         -D BUILD_PYTHON_BINDINGS=OFF \
         -D GDAL_USE_PCRE=OFF \
-        -D CMAKE_POLICY_DEFAULT_CMP0144=NEW \
-        -D OPENJPEG_ROOT="${STAGING_DIR}/usr/local" \
-        ${ECW_VERSION:+-D ECW_ROOT="${STAGING_DIR}/usr/local/ecw"} \
-        -D TIFF_ROOT="${STAGING_DIR}/usr/local" \
-        -D PROJ_ROOT="${STAGING_DIR}/usr/local" \
-        -D GEOTIFF_ROOT="${STAGING_DIR}/usr/local" \
         | tee "${REPORT_DIR}/gdal_configure"; \
     cmake --build . -j$(nproc); \
     make install DESTDIR="${STAGING_DIR}"; \
@@ -377,6 +391,7 @@ COPY --from=library ${STAGING_DIR}/usr/local /usr/local
 
 # build wheels
 RUN mkdir -p "${WHEEL_DIR}"; \
+    ldconfig; \
     #
     # python flavor
     PYBIN=$(ver=$(echo ${PYTHON_VERSION} | sed -E 's|(.)\.([^.]*).*|\1\2|'); \
@@ -387,7 +402,9 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     # https://github.com/pyproj4/pyproj/issues/1321
     "${PYBIN}/pip" install \
         "cython<3" \
-        numpy==${NUMPY_VERSION}; \
+        numpy==${NUMPY_VERSION} \
+        setuptools \
+        ; \
     #
     # build gdal wheel
     "${PYBIN}/pip" wheel gdal==${GDAL_VERSION} --no-binary gdal \
