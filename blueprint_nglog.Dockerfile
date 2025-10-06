@@ -1,5 +1,4 @@
-# ARG BASE_IMAGE="quay.io/pypa/manylinux2014_x86_64:2024-07-02-9ac04ee"
-ARG BASE_IMAGE=quay.io/pypa/manylinux_2_28_x86_64
+ARG BASE_IMAGE="quay.io/pypa/manylinux_2_28_x86_64:2025.09.28-1"
 FROM "${BASE_IMAGE}" AS builder
 
 SHELL ["/usr/bin/env", "/bin/bash", "-euxvc"]
