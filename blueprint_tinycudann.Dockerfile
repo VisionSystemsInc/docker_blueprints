@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 
-ARG BASE_IMAGE="quay.io/pypa/manylinux_2_28_x86_64"
+ARG BASE_IMAGE="quay.io/pypa/manylinux_2_28_x86_64:2025.09.28-1"
 ARG VSI_RECIPE_REPO="vsiri/recipe"
 
 # docker recipes
