@@ -94,70 +94,46 @@ RUN \
 # -----------------------------------------------------------------------------
 # ECW v5
 # -----------------------------------------------------------------------------
-# By default (empty ECW_VERSION) this plugin will not be installed as the
-# as the public download link is no longer available.
+# ECW_VERSION.....version to install, for example, "5.5.0-Update6"
+# ECW_RESOURCE....zip file in blueprint "resources" directory,
+#                 for example, "ECWJP2SDKSetup_5.5.0.2421-Update6-Linux.zip"
 #
-# Version options:
-# ARG ECW_VERSION=  # do not install installed
-# ARG ECW_VERSION=5.4.0  # not currently available
-# ARG ECW_VERSION=5.5.0  # not currently available
-#
+# By default (empty ECW_VERSION) this plugin will not be installed.
 FROM base AS ecw
 
-# version argument (do not install by default)
+# arguments (do not install by default)
 ARG ECW_VERSION=
+ARG ECW_RESOURCE=
 
 # install
-RUN \
-    # local variables
+RUN --mount=type=bind,source=resources,target=/resources,readonly \
+    #
+    # check version
     if [ -z "${ECW_VERSION:-}" ]; then \
-      echo "ECW decoder will not be installed"; \
+      echo "ECW decoder will not be installed" >&2; \
       exit 0; \
-    elif [ "${ECW_VERSION}" == "5.4.0" ]; then \
-      ZIP_FILE="erdas-ecw-sdk-5.4.0-update1-linux.zip"; \
-      ZIP_URL="https://downloads.hexagongeospatial.com/software/2018/ECW/${ZIP_FILE}"; \
-      UNPACK_DIR=/hexagon/ERDAS-ECW_JPEG_2000_SDK-5.4.0/Desktop_Read-Only; \
-    elif [ "${ECW_VERSION}" == "5.5.0" ]; then \
-      ZIP_FILE="erdas-ecw-jp2-sdk-v55-update-4-linux"; \
-      ZIP_URL="https://go2.hexagongeospatial.com/${ZIP_FILE}"; \
-      UNPACK_DIR=/root/hexagon/ERDAS-ECW_JPEG_2000_SDK-5.5.0/Desktop_Read-Only; \
-    else \
-      echo "Unrecognized ECW version ${ECW_VERSION}"; \
-      exit 1; \
     fi; \
-    #
-    # download & unzip
-    curl -fsSLO "${ZIP_URL}"; \
-    unzip "${ZIP_FILE}"; \
-    #
-    # unpack & cleanup
-    printf '1\nyes\n' | MORE=-V bash ./*.bin; \
-    #
-    # copy necessary files
-    # this removes the "new ABI" .so files as they are note needed
-    LOCAL_DIR="${STAGING_DIR}/usr/local/ecw"; \
-    mkdir -p "${LOCAL_DIR}"; \
-    cp -r "${UNPACK_DIR}"/{*.txt,bin,etc,include,lib,third*} "${LOCAL_DIR}"; \
     echo "${ECW_VERSION}" > "${REPORT_DIR}/ecw_version"; \
     #
-    # remove the "new C++11 ABI"
-    rm -rf "${LOCAL_DIR}"/{lib/cpp11abi,lib/newabi} \
-           "${LOCAL_DIR}"/{lib/x64/debug,bin/x64/debug}; \
+    # unzip & unpack
+    unzip "/resources/${ECW_RESOURCE}"; \
+    bash *.bin --accept-eula=YES --install-type=1; \
+    UNPACK_DIR="$(include_dir=$(find "/root/hexagon" -name include -type d); \
+                  dirname "$include_dir"})"; \
+    #
+    # copy necessary files
+    ECW_STAGING_DIR="${STAGING_DIR}/usr/local/ecw"; \
+    mkdir -p "${ECW_STAGING_DIR}"; \
+    cp -r "${UNPACK_DIR}"/{*.txt,include} "${ECW_STAGING_DIR}"; \
+    cp -r "${UNPACK_DIR}/redistributable/cpp11abi/x64" "${ECW_STAGING_DIR}/lib"; \
+    #
+    # link .so files to "/usr/local/lib" for runtime discovery
+    LIB_DIR="${STAGING_DIR}/usr/local/lib"; \
+    mkdir -p "${LIB_DIR}"; cd "${LIB_DIR}"; \
+    ln -s ../ecw/lib/libNCSEcw.so* .; \
     #
     # cleanup
     rm -rf "${UNPACK_DIR}" /tmp/*;
-
-# link .so files to "/usr/local/lib" for easier discovery
-RUN \
-    # skip linking if not installed
-    if [ -z "${ECW_VERSION:-}" ]; then \
-      echo "ECW decoder will not be installed"; \
-      exit 0; \
-    fi; \
-    # make links
-    mkdir -p "${STAGING_DIR}/usr/local/lib"; \
-    cd "${STAGING_DIR}/usr/local/lib"; \
-    ln -s ../ecw/lib/x64/release/libNCSEcw.so* .;
 
 
 # -----------------------------------------------------------------------------
@@ -360,10 +336,11 @@ COPY --from=geotiff ${STAGING_DIR} ${STAGING_DIR}
 # https://raw.githubusercontent.com/OSGeo/gdal/master/gdal/configure
 RUN mkdir build; cd build; \
     cmake .. \
-        -D CMAKE_PREFIX_PATH="${STAGING_DIR}/usr/local" \
+        -D CMAKE_PREFIX_PATH="${STAGING_DIR}/usr/local;${STAGING_DIR}/usr/local/ecw" \
         -D CMAKE_BUILD_TYPE=Release \
         -D BUILD_PYTHON_BINDINGS=OFF \
         -D GDAL_USE_PCRE=OFF \
+        -D GDAL_ENABLE_DRIVER_ECW_PLUGIN=ON \
         | tee "${REPORT_DIR}/gdal_configure"; \
     cmake --build . -j$(nproc); \
     make install DESTDIR="${STAGING_DIR}"; \
