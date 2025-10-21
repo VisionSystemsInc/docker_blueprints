@@ -1,11 +1,5 @@
 version: 2.1
 
-# Optional enviromment variables:
-# $CI_BLUEPRINT_REPO - dockerhub repo for blueprint cache (default "vsiri/ci_cache_blueprints")
-# $CI_BLUEPRINT_TEST_REPO - dockerhub repo for blueprint test cache (default "vsiri/ci_cache_blueprint_tests")
-# $CI_BLUEPRINT_VERSION - version string for blueprint cache (default "")
-# $JUST_CI_BRANCH_PUSH - branch (besides main) for dockerhub push
-
 # -----
 # generic yaml anchors
 # -----
@@ -22,119 +16,259 @@ x-references:
 
 
 # -----
-# circleci custom commands
+# CircleCI custom commands
 # -----
 commands:
 
-  # checkout submodules
-  build_setup:
-    description: Build setup
+  # checkout docker_blueprints within vsi_common:
+  # -- checkout vsi_common main, then navigate to docker_blueprints submodule
+  #    and checkout current docker_blueprints SHA
+  # -- requires $VSI_COMMON_DIR to be defined
+  checkout_in_vsi_common:
+    description: Checkout code in vsi_common
     steps:
-
       - run:
-          name: Checkout vsi_common
+          name: Checkout code in vsi_common
           command: |
             git clone --recursive https://github.com/VisionSystemsInc/vsi_common.git "${VSI_COMMON_DIR}"
-            rm -rf "${BLUEPRINT_DIR}"
+            cd "${VSI_COMMON_DIR}/docker/blueprints"
+            git checkout "${CIRCLE_SHA1}"
 
-      - checkout:
-          path: "docker/blueprints"
-
-      - run:
-          name: Setup
-          command: |
-
-            # install additional software
-            pip3 install pyyaml
-
-            # login to dockerhub
-            docker login -u "${DOCKER_USER}" -p "${DOCKER_PASS}"
-
-            # push from main repo, main or ${JUST_CI_BRANCH_PUSH} branches
-            if [[ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" && \
-                  ("${CIRCLE_BRANCH}" == "main" || \
-                   "${CIRCLE_BRANCH}" == "${JUST_CI_BRANCH_PUSH-}") ]]
-            then
-              CI_PUSH_OPT="--push"
-            else
-              CI_PUSH_OPT="--no-push"
-            fi
-
-            # ----------
-            # permanently add common options to BASH_ENV
-            cat \<<EOF >> "${BASH_ENV}"
-
-            # these parameters can be overridden by project-level environment variables
-            : \${CI_BLUEPRINT_REPO="vsiri/ci_cache_blueprints"}
-            : \${CI_BLUEPRINT_TEST_REPO="vsiri/ci_cache_blueprint_tests"}
-            : \${CI_BLUEPRINT_VERSION=""}
-            : \${JUST_CI_BRANCH_PUSH=}
-
-            # compose file locations
-            BLUEPRINT_COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
-            BLUEPRINT_TEST_COMPOSE_FILE="${BLUEPRINT_DIR}/tests/docker-compose.yml"
-
-            # ci_load options
-            CI_LOAD_OPTIONS=(
-                ${CI_BLUEPRINT_VERSION:+ --cache-version "${CI_BLUEPRINT_VERSION}"}
-                "--quiet-pull"
-                "--print-build"
-                "--print-push-pull"
-                "${CI_PUSH_OPT}"
-                "--recipe-repo IGNORE"
-            )
-
-            # ci_load command
-            CI_LOAD="python3 ${VSI_COMMON_DIR}/linux/ci_load.py"
-
-            EOF
-            # ----------
-
-            # display bash_env
-            cat "${BASH_ENV}"
+  # docker setup
+  # - setup a remote docker environment
+  # - dockerhub login using project variables
+  # - create a buildx builder using the "docker-container" driver to
+  #   take advantage of "cache-to" capabilities.
+  # - use of the docker-container driver also requires a local registry when
+  #   building test images to be able to source the latest blueprint images
+  #   (docker-container only uses registry images during the build process)
+  setup_docker:
+    description: Setup docker
+    steps:
 
       - setup_remote_docker
 
+      - run:
+          name: Dockerhub login
+          command: echo "${DOCKER_PASS}" | docker login -u "${DOCKER_USER}" --password-stdin
 
-  # pull final images from cache
-  #
-  # useful for fast debugging. For example, to pull GDAL & PDAL test images
-  # - pull_final_images:
-  #     services: "test_gdal test_pdal"
-  #     cache_repo: "${CI_BLUEPRINT_TEST_REPO}"
-  #     local_repo: "vsiri/blueprint_test"
-  #
-  pull_final_images:
-    description: Build setup
+      - run:
+          name: Buildx with "docker-container" driver
+          command: |
+            : ${CONTEXT_NAME="ci_builder_context"}
+            : ${BUILDER_NAME="ci_builder"}
+            : ${BUILDKITD_TOML="${BLUEPRINT_DIR}/.circleci/buildkitd.toml"}
+            docker context create "${CONTEXT_NAME}"
+            docker buildx create \
+                --name "${BUILDER_NAME}" \
+                --driver docker-container \
+                --driver-opt network=host \
+                --config "${BUILDKITD_TOML}" \
+                ${CONTEXT_NAME}
+            docker buildx use --builder "${BUILDER_NAME}"
+
+      - run:
+          name: Start localhost docker registry
+          command: |
+            : ${COMPOSE_FILE="${BLUEPRINT_DIR}/.circleci/docker-compose.yml"}
+            docker compose -f "${COMPOSE_FILE}" up -d
+
+  # run "docker buildx bake" on user-selected docker compose file
+  build:
+    description: Build dockers (buildx)
     parameters:
-      services:
-        description: services separated by spaces
+      step_name:
+        description: Step name
         type: string
-      cache_repo:
-        description: cache repo
-        type: string
-      local_repo:
-        description: local repo
-        type: string
+        default: Build blueprints (buildx)
+      step_type:
+        description: Build blueprint or test
+        type: enum
+        enum: ["blueprint", "blueprint-for-test", "test"]
     steps:
       - run:
-          name: Pull final images
+          name: << parameters.step_name >>
           command: |
 
-            set -x
+            # array of available blueprint services to build
+            BLUEPRINT_SERVICES=( gdal pdal nglog s2 tinycudann )
 
-            # array of services
-            SERVICES="<< parameters.services >>"
-            SERVICES=(${SERVICES})
-
-            # pull "final" image for each service from cache
-            for service in "${SERVICES[@]}"; do
-              CACHE_IMAGE="<< parameters.cache_repo >>:${service}_final"
-              LOCAL_IMAGE="<< parameters.local_repo >>:${service}"
-
-              docker pull "${CACHE_IMAGE}"
-              docker tag "${CACHE_IMAGE}" "${LOCAL_IMAGE}"
+            # array of test services
+            TEST_SERVICES=()
+            for service in "${BLUEPRINT_SERVICES[@]}"; do
+              TEST_SERVICES+=( "test_${service}" );
             done
+
+            # blueprint & test locations
+            BLUEPRINT_LOCALHOST="localhost:5000/blueprint"
+            BLUEPRINT_DOCKERHUB="vsiri/blueprint"
+            BLUEPRINT_CACHE="${BLUEPRINT_DOCKERHUB}-cache"
+
+            TEST_LOCALHOST="localhost:5000/blueprint_test"
+            TEST_DOCKERHUB="vsiri/blueprint_test"
+            TEST_CACHE="${TEST_DOCKERHUB}-cache"
+
+            # some push/cache to dockerhub options are enabled only from:
+            # - `main` branch of VSI repo
+            # - `${CI_BRANCH_PUSH}` branch of VSI repo
+            if [[ "${CIRCLE_PROJECT_USERNAME,,}" == "visionsystemsinc" && \
+                  ("${CIRCLE_BRANCH}" == "main" || \
+                   "${CIRCLE_BRANCH}" == "${CI_BRANCH_PUSH-}") ]]
+            then
+              PUSH=1
+            else
+              PUSH=0
+            fi
+
+            # options based on "step_type" parameter
+            STEP_TYPE="<< parameters.step_type >>"
+
+            if [ "${STEP_TYPE}" == "blueprint" ]; then
+
+              COMPOSE_FILE="${BLUEPRINT_DIR}/docker-compose.yml"
+              SERVICES=( "${BLUEPRINT_SERVICES[@]}" )
+
+              LOCALHOST_PUSH=1  # push to localhost registry for dependent blueprints
+              DOCKERHUB_PUSH="${PUSH}"  # push to dockerhub in some cases
+              DOCKERHUB_CACHE_TO="${PUSH}"  # cache-to dockerhub in some cases
+
+              LOCALHOST_REPO="${BLUEPRINT_LOCALHOST}"
+              DOCKERHUB_REPO="${BLUEPRINT_DOCKERHUB}"
+              DOCKERHUB_CACHE="${BLUEPRINT_CACHE}"
+
+            elif [ "${STEP_TYPE}" == "blueprint-for-test" ]; then
+
+              COMPOSE_FILE="${BLUEPRINT_DIR}/tests/docker-compose.yml"
+              SERVICES=( "${BLUEPRINT_SERVICES[@]}" )
+
+              LOCALHOST_PUSH=1  # push to localhost registry for tests & dependent blueprints
+              DOCKERHUB_PUSH=0  # push to dockerhub not needed
+              DOCKERHUB_CACHE_TO="${PUSH}"  # cache-to dockerhub in some cases
+
+              LOCALHOST_REPO="${TEST_LOCALHOST}"
+              DOCKERHUB_REPO="${TEST_DOCKERHUB}"
+              DOCKERHUB_CACHE="${TEST_CACHE}"
+
+              ALT_CACHE="${BLUEPRINT_CACHE}"
+
+            elif [ "${STEP_TYPE}" == "test" ]; then
+
+              COMPOSE_FILE="${BLUEPRINT_DIR}/tests/docker-compose.yml"
+              SERVICES=( "${TEST_SERVICES[@]}" )
+
+              LOCALHOST_PUSH=0  # push to localhost registry not needed
+              DOCKERHUB_PUSH=0  # push to dockerhub not needed
+              DOCKERHUB_CACHE_TO="${PUSH}"  # cache-to dockerhub in some cases
+
+              LOCALHOST_REPO="${TEST_LOCALHOST}"
+              DOCKERHUB_REPO="${TEST_DOCKERHUB}"
+              DOCKERHUB_CACHE="${TEST_CACHE}"
+
+            else
+              echo "Unrecognized step type '${STEP_TYPE}'" >&2
+              exit 1
+            fi
+
+            # report options
+            echo "--------------------"
+            echo "COMPOSE_FILE=${COMPOSE_FILE}"
+            echo "SERVICES=( ${SERVICES[@]} )"
+            echo ""
+            echo "LOCALHOST_PUSH=${LOCALHOST_PUSH}"
+            echo "DOCKERHUB_PUSH=${DOCKERHUB_PUSH}"
+            echo "DOCKERHUB_CACHE_TO=${DOCKERHUB_CACHE_TO}"
+            echo ""
+            echo "LOCALHOST_REPO=${LOCALHOST_REPO}"
+            echo "DOCKERHUB_REPO=${DOCKERHUB_REPO}"
+            echo "DOCKERHUB_CACHE=${DOCKERHUB_CACHE}"
+            echo "ALT_CACHE=${ALT_CACHE-}"
+            echo "--------------------"
+
+            # function to discover service image from docker-compose file
+            function get_image() {
+              docker compose -f "${COMPOSE_FILE}" config --images "${1}"
+            }
+
+            # common buildx options
+            COMMON_OPTS=(
+              -f "${COMPOSE_FILE}"
+              --load
+              # --progress=plain
+            )
+
+            # direct the buildx 'docker-container' driver to source
+            # blueprints from the localhost registry (not dockerhub)
+            for bp in "${BLUEPRINT_SERVICES[@]}"; do
+              COMMON_OPTS+=( "--set=*.args.${bp^^}_IMAGE=${LOCALHOST_REPO}:${bp}" )
+            done
+
+            # parallel tasks
+            TASKS=( $(IFS=$'\n'; echo "${TASKS[*]}" | circleci tests split) )
+
+            # build each service
+            # (we build one at a time to support GDAL before PDAL)
+            for SERVICE in "${SERVICES[@]}"; do
+              echo -e "\n===== BUILD ${SERVICE} ====="
+
+              # array of docker images to push after build
+              IMAGES_TO_PUSH=()
+
+              # service buildx options
+              OPTS=( "${COMMON_OPTS[@]}" )
+
+              # default image tag (never pushed)
+              DEFAULT_TAG="$(get_image "${SERVICE}")"
+              OPTS+=( "--set=${SERVICE}.tags=${DEFAULT_TAG}" )
+
+              # optionally tag & push to localhost
+              if [ "${LOCALHOST_PUSH-}" == "1" ]; then
+                LOCALHOST_TAG="${LOCALHOST_REPO}:${SERVICE}"
+                OPTS+=( "--set=${SERVICE}.tags=${LOCALHOST_TAG}" )
+                IMAGES_TO_PUSH+=( "${LOCALHOST_TAG}" )
+              fi
+
+              # optionally tag & push to dockerhub
+              # (do not push cuda & cudagl images)
+              if [ "${DOCKERHUB_PUSH-}" == "1" ] && [[ "${SERVICE}" != *cuda* ]]; then
+                DOCKERHUB_TAG="${DOCKERHUB_REPO}:${SERVICE}"
+                OPTS+=( "--set=${SERVICE}.tags=${DOCKERHUB_TAG}" )
+                IMAGES_TO_PUSH+=( "${DOCKERHUB_TAG}" )
+              fi
+
+              # service dockerhub cache
+              CACHE="${DOCKERHUB_CACHE}:${SERVICE}"
+
+              # always cache-from
+              OPTS+=( "--set=${SERVICE}.cache-from=ref=${CACHE},type=registry" )
+
+              # optional alternative cache-from
+              # for example, blueprint-for-test could re-use some cache from blueprint
+              if [ -n "${ALT_CACHE}" ]; then
+                OPTS+=( "--set=${SERVICE}.cache-from=ref=${ALT_CACHE}:${SERVICE},type=registry" )
+              fi
+
+              # optionally cache-to
+              if [ "${DOCKERHUB_CACHE_TO-}" == "1" ]; then
+                OPTS+=( "--set=${SERVICE}.cache-to=ref=${CACHE},type=registry,mode=max,image-manifest=true" )
+              fi
+
+              # report & build
+              pushd "$(dirname "${COMPOSE_FILE}")" &> /dev/null
+                docker buildx bake --print "${OPTS[@]}" "${SERVICE}"
+                docker buildx bake "${OPTS[@]}" "${SERVICE}"
+              popd &> /dev/null
+
+              # push images
+              for IMAGE in "${IMAGES_TO_PUSH[@]}"; do
+                echo -e "\n----- PUSH ${IMAGE} ------"
+                docker push "${IMAGE}"
+              done
+
+            done
+
+            # report local images
+            echo -e "\n----- DOCKER IMAGES -----"
+            docker images
 
 
 # -----
@@ -145,64 +279,28 @@ jobs:
   build_blueprints:
     <<: *build_config
     steps:
-      - build_setup
 
-      - run:
-          name: Build blueprints (ci_load)
-          command: |
+      - checkout_in_vsi_common
+      - setup_docker
 
-            # discover blueprints
-            SERVICES=( gdal pdal nglog s2 tinycudann )
-
-            # ci_load for each blueprint
-            for service in "${SERVICES[@]}"; do
-              ${CI_LOAD} \
-                --cache-repo "${CI_BLUEPRINT_REPO}" \
-                ${CI_LOAD_OPTIONS[*]} \
-                "${BLUEPRINT_COMPOSE_FILE}" "${service}"
-            done
-
-      - run:
-          name: List docker images
-          command: |
-            docker images | awk 'NR == 1; NR > 1 {print $0 | "sort -k2"}'
-
+      - build:
+          step_name: Build blueprints (buildx)
+          step_type: blueprint
 
   build_tests:
     <<: *build_config
     steps:
-      - build_setup
 
-      - run:
-          name: Build test blueprints (ci_load)
-          command: |
+      - checkout_in_vsi_common
+      - setup_docker
 
-            # named services
-            SERVICES=( gdal pdal nglog s2 tinycudann )
+      - build:
+          step_name: Build blueprints for tests (buildx)
+          step_type: blueprint-for-test
 
-            # ci_load for each service, including default blueprint cache
-            for service in "${SERVICES[@]}"; do
-              ${CI_LOAD} \
-                --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
-                --other-repos "${CI_BLUEPRINT_REPO}" \
-                ${CI_LOAD_OPTIONS[*]} \
-                "${BLUEPRINT_TEST_COMPOSE_FILE}" "${service}"
-            done
-
-      - run:
-          name: Build test services (ci_load)
-          command: |
-
-            # named services
-            SERVICES=( test_gdal test_pdal test_nglog test_s2 test_tinycudann )
-
-            # ci_load for each service
-            for service in "${SERVICES[@]}"; do
-              ${CI_LOAD} \
-                --cache-repo "${CI_BLUEPRINT_TEST_REPO}" \
-                ${CI_LOAD_OPTIONS[*]} \
-                "${BLUEPRINT_TEST_COMPOSE_FILE}" "${service}"
-            done
+      - build:
+          step_name: Build tests (buildx)
+          step_type: test
 
       - run:
           name: Run integration tests
@@ -218,6 +316,4 @@ workflows:
   build_and_test:
     jobs:
       - build_blueprints
-      - build_tests:
-          requires:
-            - build_blueprints
+      - build_tests
