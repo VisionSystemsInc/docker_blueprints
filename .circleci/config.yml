@@ -228,8 +228,7 @@ commands:
               fi
 
               # optionally tag & push to dockerhub
-              # (do not push cuda & cudagl images)
-              if [ "${DOCKERHUB_PUSH-}" == "1" ] && [[ "${SERVICE}" != *cuda* ]]; then
+              if [ "${DOCKERHUB_PUSH-}" == "1" ]; then
                 DOCKERHUB_TAG="${DOCKERHUB_REPO}:${SERVICE}"
                 OPTS+=( "--set=${SERVICE}.tags=${DOCKERHUB_TAG}" )
                 IMAGES_TO_PUSH+=( "${DOCKERHUB_TAG}" )
