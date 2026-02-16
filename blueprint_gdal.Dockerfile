@@ -376,9 +376,18 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     python_minor=${python_minor%%.*}; \
     python_dir=("/opt/python/cp${python_major}${python_minor}-"cp*[0-9m]); \
     #
+    # pyproj<3.6.1 is incompatible with cython 3+
+    # https://github.com/pyproj4/pyproj/issues/1321
+    function version_le() { test "$(echo -e "$1\n$2" | sort -V | head -n 1)" == "$1"; }; \
+    if version_le "3.6.1" "${PYPROJ_VERSION}"; then \
+        CYTHON_DEP="cython"; \
+    else \
+        CYTHON_DEP="cython<3"; \
+    fi; \
+    #
     # install python dependencies
     "${python_dir}/bin/pip" install \
-        "cython<3" \
+        ${CYTHON_DEP} \
         numpy==${NUMPY_VERSION} \
         setuptools \
         ; \
