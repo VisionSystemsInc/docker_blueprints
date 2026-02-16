@@ -55,8 +55,8 @@ ARG LASZIP_VERSION=3.4.4
 # install
 RUN \
     # download & unzip
-    TAR_FILE="laszip-src-${LASZIP_VERSION}.tar.gz"; \
-    curl -fsSLO "https://github.com/LASzip/LASzip/releases/download/${LASZIP_VERSION}/${TAR_FILE}"; \
+    TAR_FILE="${LASZIP_VERSION}.tar.gz"; \
+    curl -fsSLO "https://github.com/LASzip/LASzip/archive/refs/tags/${TAR_FILE}"; \
     tar -xvf "${TAR_FILE}" --strip-components=1; \
     #
     # configure, build, & install
