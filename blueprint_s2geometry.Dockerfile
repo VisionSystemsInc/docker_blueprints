@@ -8,9 +8,22 @@ RUN dnf install -y \
           https://dl.fedoraproject.org/pub/epel/8/Modular/x86_64/Packages/s/swig-4.0.2-9.module_el8+12710+46f2eec2.x86_64.rpm; \
     rm -rf /var/cache/yum/*
 
-ARG ABSEIL_VERSION=20240722.0
+ARG S2GEOMETRY_VERSION=v0.11.1
+ARG PYTHON_VERSION=3.10.15
+ARG ABSEIL_VERSION=
 
-RUN git clone https://github.com/abseil/abseil-cpp.git /absl; \
+RUN \
+    # required abseil version if no ARG
+    if [ -z "${ABSEIL_VERSION}" ]; then \
+      function version_le() { test "$(echo -e "$1\n$2" | sort -V | head -n 1)" == "$1"; }; \
+      if version_le "0.13.0" "${S2GEOMETRY_VERSION}"; then \
+        ABSEIL_VERSION="20250814.1"; \
+      else \
+        ABSEIL_VERSION="20240722.0"; \
+      fi; \
+    fi; \
+    # install abseil
+    git clone https://github.com/abseil/abseil-cpp.git /absl; \
     cd /absl; \
     git checkout "${ABSEIL_VERSION}"; \
     cmake -B /absl/build \
@@ -24,9 +37,6 @@ RUN git clone https://github.com/abseil/abseil-cpp.git /absl; \
     cmake --build /absl/build --target install; \
     cd /; \
     rm -r /absl
-
-ARG S2GEOMETRY_VERSION=v0.11.1
-ARG PYTHON_VERSION=3.10.15
 
 RUN python_major=${PYTHON_VERSION%%.*}; \
     python_minor=${PYTHON_VERSION#*.}; \
