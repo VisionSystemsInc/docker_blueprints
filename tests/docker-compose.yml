@@ -13,8 +13,7 @@ x-args:
     LIBUNWIND_VERSION: "v1.8.2"
     PYTHON_VERSION: &nglog_python_version "3.9"
   s2: &s2_args
-    S2GEOMETRY_VERSION: "v0.11.1"
-    ABSEIL_VERSION: "20240722.0"
+    S2GEOMETRY_VERSION: "v0.13.1"
     PYTHON_VERSION: &s2_python_version "3.10.15"
   tinycudann: &tinycudann_args
     CUDA_VERSION: &tinycudann_cuda_version "11.8.0"
