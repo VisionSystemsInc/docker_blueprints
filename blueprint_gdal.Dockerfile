@@ -371,26 +371,26 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     ldconfig; \
     #
     # python flavor
-    PYBIN=$(ver=$(echo ${PYTHON_VERSION} | sed -E 's|(.)\.([^.]*).*|\1\2|'); \
-            echo /opt/python/cp${ver}-*/bin); \
+    python_major=${PYTHON_VERSION%%.*}; \
+    python_minor=${PYTHON_VERSION#*.}; \
+    python_minor=${python_minor%%.*}; \
+    python_dir=("/opt/python/cp${python_major}${python_minor}-"cp*[0-9m]); \
     #
     # install python dependencies
-    # Note pyproj incompatibility with cython 3+
-    # https://github.com/pyproj4/pyproj/issues/1321
-    "${PYBIN}/pip" install \
+    "${python_dir}/bin/pip" install \
         "cython<3" \
         numpy==${NUMPY_VERSION} \
         setuptools \
         ; \
     #
     # build gdal wheel
-    "${PYBIN}/pip" wheel gdal==${GDAL_VERSION} --no-binary gdal \
+    "${python_dir}/bin/pip" wheel gdal==${GDAL_VERSION} --no-binary gdal \
         --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
     #
     # build pyproj wheel
     # While this project already provides manylinux wheels on pypi, building
     # pyproj here ensures the wheel uses the installed libproj & PROJ_VERSION
-    "${PYBIN}/pip" wheel pyproj==${PYPROJ_VERSION} --no-binary pyproj \
+    "${python_dir}/bin/pip" wheel pyproj==${PYPROJ_VERSION} --no-binary pyproj \
         --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
     #
     # cleanup

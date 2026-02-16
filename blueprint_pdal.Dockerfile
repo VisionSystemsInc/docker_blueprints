@@ -218,11 +218,13 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     sed -i '/^[ ]*find_package/s/Development /Development.Module /g' ./CMakeLists.txt; \
     #
     # python flavor
-    PYBIN=$(ver=$(echo ${PYTHON_VERSION} | sed -E 's|(.)\.([^.]*).*|\1\2|'); \
-            echo /opt/python/cp${ver}-*/bin); \
+    python_major=${PYTHON_VERSION%%.*}; \
+    python_minor=${PYTHON_VERSION#*.}; \
+    python_minor=${python_minor%%.*}; \
+    python_dir=("/opt/python/cp${python_major}${python_minor}-"cp*[0-9m]); \
     #
     # install python dependencies
-    "${PYBIN}/pip" install \
+    "${python_dir}/bin/pip" install \
         ninja \
         numpy==${NUMPY_VERSION} \
         pybind11[global] \
@@ -231,10 +233,10 @@ RUN mkdir -p "${WHEEL_DIR}"; \
         ; \
     #
     # build wheel
-    # Note $PYBIN is added to the path to allow cmake (used during the build
-    # process) to identify the correct python version
-    PATH="${PYBIN}:$PATH"; \
-    "${PYBIN}/pip" wheel . \
+    # Note $python_dir/bin is added to the path to allow cmake (used during
+    # the build process) to identify the correct python version
+    PATH="${python_dir}/bin:$PATH"; \
+    "${python_dir}/bin/pip" wheel . \
         --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
     #
     # cleanup
