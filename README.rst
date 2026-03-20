@@ -325,15 +325,15 @@ Python bindings for tiny-cuda-nn
             context: "${VSI_COMMON_DIR}/docker/blueprints"
             dockerfile: blueprint_tinycudann.Dockerfile
             args:
-               # CUDA_VERSION: "11.8.0"
+               # CUDA_VERSION: "12.9.1"
                # https://hub.docker.com/r/nvidia/cuda/tags
-               # PYTHON_VERSION: "3.10.18"
+               # PYTHON_VERSION: "3.13.12"
                # https://www.python.org/doc/versions/
                # TINYCUDANN_VERSION: "v2.0"
                # https://github.com/NVlabs/tiny-cuda-nn/tags
                # TCNN_CUDA_ARCHITECTURES: "70,86"
                # https://github.com/NVlabs/tiny-cuda-nn/blob/v2.0/bindings/torch/setup.py#L45-L47
-               # TORCH_VERSION: "2.1.2+cu118"
+               # TORCH_VERSION: "2.9.1+cu129"
                # https://download.pytorch.org/whl/torch/
                # VSI_RECIPE_REPO: "vsiri/recipe"
                # https://hub.docker.com/r/vsiri/recipe

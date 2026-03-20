@@ -29,7 +29,7 @@ RUN dnf install -y \
     rm -rf /var/cache/yum/*
 
 # python & wheelhouse setup
-ARG PYTHON_VERSION="3.10.15"
+ARG PYTHON_VERSION="3.13.12"
 RUN python_major=${PYTHON_VERSION%%.*}; \
     python_minor=${PYTHON_VERSION#*.}; \
     python_minor=${python_minor%%.*}; \
@@ -40,7 +40,7 @@ RUN python_major=${PYTHON_VERSION%%.*}; \
     mkdir -p /wheelhouse;
 
 # python build dependencies
-ARG TORCH_VERSION="2.1.2+cu118"
+ARG TORCH_VERSION="2.9.1+cu129"
 RUN --mount=type=cache,target=/cache/pip,mode=0755 \
     if [[ "${TORCH_VERSION}" != *"+cu"* ]]; then \
       echo "TORCH_VERSION=${TORCH_VERSION} missing cuda identifier" >&2; \
@@ -48,12 +48,12 @@ RUN --mount=type=cache,target=/cache/pip,mode=0755 \
     fi; \
     torch_url="https://download.pytorch.org/whl/${TORCH_VERSION#*+}"; \
     /venv/bin/pip3 install --extra-index-url ${torch_url} \
-        "torch==${TORCH_VERSION}" "numpy<2" setuptools wheel;
+        "torch==${TORCH_VERSION}" "setuptools<82" wheel;
 
 # build tinycudann wheel
 ARG NINJA_BUILD_CONCURRENCY=
 ARG TCNN_CUDA_ARCHITECTURES="70,86"
-ARG TINYCUDANN_VERSION="c91138bcd4c6877c8d5e60e483c0581aafc70cce"
+ARG TINYCUDANN_VERSION="v2.0"
 
 RUN cd /tmp; \
     # clone tinycudann with submodules
