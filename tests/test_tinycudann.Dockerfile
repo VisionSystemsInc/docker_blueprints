@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 
-ARG CUDA_VERSION="11.8.0"
+ARG CUDA_VERSION="12.9.1"
 ARG TINYCUDANN_IMAGE="vsiri/blueprint_test:tinycudann"
 
 ARG BASE_IMAGE="nvidia/cuda:${CUDA_VERSION}-runtime-ubi8"
@@ -23,19 +23,19 @@ RUN dnf install -y \
     rm -rf /var/cache/yum
 
 # versioned python via miniforge
-ARG PYTHON_VERSION="3.10.15"
+ARG PYTHON_VERSION="3.13.12"
 RUN curl -fsSLo /mini.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh; \
     sh /mini.sh -b -p /conda -s; \
     rm /mini.sh; \
     /conda/bin/conda create -y -p /usr/local "python==${PYTHON_VERSION}"
 
 # python venv
-ARG TORCH_VERSION="2.1.2+cu118"
+ARG TORCH_VERSION="2.9.1+cu129"
 RUN --mount=type=cache,target=/cache/pip,mode=0755 \
     torch_url="https://download.pytorch.org/whl/${TORCH_VERSION#*+}"; \
     "/usr/local/bin/python" -m venv /venv; \
     /venv/bin/pip3 install --extra-index-url ${torch_url} \
-        "torch==${TORCH_VERSION}" "numpy<2";
+        "torch==${TORCH_VERSION}" numpy;
 
 # tiny-cuda-nn
 COPY --from=tinycudann /usr/local /usr/local

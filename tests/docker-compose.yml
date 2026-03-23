@@ -16,11 +16,11 @@ x-args:
     S2GEOMETRY_VERSION: "v0.13.1"
     PYTHON_VERSION: &s2_python_version "3.10.15"
   tinycudann: &tinycudann_args
-    CUDA_VERSION: &tinycudann_cuda_version "11.8.0"
-    PYTHON_VERSION: &tinycudann_python_version "3.10.15"
-    TINYCUDANN_VERSION: "c91138bcd4c6877c8d5e60e483c0581aafc70cce"
+    CUDA_VERSION: &tinycudann_cuda_version "12.9.1"
+    PYTHON_VERSION: &tinycudann_python_version "3.13.12"
+    TINYCUDANN_VERSION: "v2.0"
     TCNN_CUDA_ARCHITECTURES: "70,86"
-    TORCH_VERSION: &tinycudann_torch_version "2.1.2+cu118"
+    TORCH_VERSION: &tinycudann_torch_version "2.9.1+cu129"
 
 services:
 

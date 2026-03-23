@@ -84,7 +84,7 @@ services:
       dockerfile: blueprint_tinycudann.Dockerfile
       args:
         # BASE_IMAGE: "${BASE_IMAGE}"
-        CUDA_VERSION: "11.8.0"
+        CUDA_VERSION: "12.9.1"
         # PYTHON_VERSION: "${PYTHON_VERSION}"
         # TINYCUDANN_VERSION: "${TINYCUDANN_VERSION}"
         # TCNN_CUDA_ARCHITECTURES: "${TCNN_CUDA_ARCHITECTURES}"
