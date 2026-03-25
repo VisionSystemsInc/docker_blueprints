@@ -17,6 +17,7 @@ ARG NUMPY_VERSION
 # copy from blueprints
 COPY --from=gdal /usr/local /usr/local
 COPY --from=pdal /usr/local /usr/local
+COPY --from=pdal /wheelhouse /wheelhouse
 
 # access to lib64 packages
 ENV LD_LIBRARY_PATH="/usr/local/lib64"
@@ -26,4 +27,4 @@ RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/
 
 # install numpy first, then pdal from wheel
 RUN pip install numpy==${NUMPY_VERSION}; \
-    pip install /usr/local/share/just/wheels/pdal*.whl;
+    pip install /wheelhouse/pdal*.whl;

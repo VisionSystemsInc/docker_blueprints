@@ -197,15 +197,41 @@ ARG PDAL_PYTHON_VERSION=3.4.5
 ARG PYTHON_VERSION=3.10.18
 ARG NUMPY_VERSION=2.1.3
 
-# wheel directory
-ENV WHEEL_DIR="${STAGING_DIR}/usr/local/share/just/wheels"
+# python venv
+RUN \
+    # python directory
+    python_major=${PYTHON_VERSION%%.*}; \
+    python_minor=${PYTHON_VERSION#*.}; \
+    python_minor=${python_minor%%.*}; \
+    python_dir=("/opt/python/cp${python_major}${python_minor}-"cp*[0-9m]); \
+    #
+    # create python venv & add build dependencies
+    "${python_dir}/bin/python3" -m venv /venv; \
+    source /venv/bin/activate; \
+    pip3 install \
+        ninja \
+        numpy==${NUMPY_VERSION} \
+        pybind11[global] \
+        scikit-build \
+        scikit-build-core \
+        wheel \
+        ; \
+    #
+    # cleanup
+    rm -rf /tmp/*;
 
 # local dependencies to /usr/local
 COPY --from=gdal /usr/local /usr/local
 COPY --from=library ${STAGING_DIR}/usr/local /usr/local
+ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+
+# wheel directories
+ENV WHEEL_TMP="/wheelhouse-tmp" \
+    WHEEL_DIR="/wheelhouse"
 
 # build wheels
-RUN mkdir -p "${WHEEL_DIR}"; \
+RUN mkdir -p "${WHEEL_TMP}"; \
+    source /venv/bin/activate; \
     #
     # download pdal-python
     TAR_FILE="${PDAL_PYTHON_VERSION}.tar.gz"; \
@@ -217,31 +243,17 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     # https://github.com/google/or-tools/issues/2774
     sed -i '/^[ ]*find_package/s/Development /Development.Module /g' ./CMakeLists.txt; \
     #
-    # python flavor
-    python_major=${PYTHON_VERSION%%.*}; \
-    python_minor=${PYTHON_VERSION#*.}; \
-    python_minor=${python_minor%%.*}; \
-    python_dir=("/opt/python/cp${python_major}${python_minor}-"cp*[0-9m]); \
-    #
-    # install python dependencies
-    "${python_dir}/bin/pip" install \
-        ninja \
-        numpy==${NUMPY_VERSION} \
-        pybind11[global] \
-        scikit-build \
-        scikit-build-core \
-        ; \
-    #
     # build wheel
-    # Note $python_dir/bin is added to the path to allow cmake (used during
-    # the build process) to identify the correct python version
-    PATH="${python_dir}/bin:$PATH"; \
-    "${python_dir}/bin/pip" wheel . \
-        --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
+    pip3 wheel . --no-deps --no-build-isolation -w "${WHEEL_TMP}"; \
     #
     # cleanup
     rm -rf /tmp/*; \
-    ls -la "${WHEEL_DIR}";
+    ls -lah "${WHEEL_TMP}";
+
+# auditwheel
+RUN mkdir -p "${WHEEL_DIR}"; \
+    auditwheel repair "${WHEEL_TMP}"/*.whl -w "${WHEEL_DIR}"; \
+    ls -lah "${WHEEL_DIR}";
 
 
 # -----------------------------------------------------------------------------
@@ -254,7 +266,9 @@ RUN rm -rf /usr/local/*
 
 # migrate staging directory to /usr/local
 COPY --from=library ${STAGING_DIR}/usr/local /usr/local
-COPY --from=wheel ${STAGING_DIR}/usr/local /usr/local
+
+# store python wheels
+COPY --from=wheel /wheelhouse /wheelhouse
 
 # Patch file for downstream image
 ENV PDAL_PATCH_FILE=/usr/local/share/just/container_build_patch/30_pdal
