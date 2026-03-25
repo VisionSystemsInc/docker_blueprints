@@ -379,11 +379,12 @@ RUN \
     #
     # create python venv & add build dependencies
     "${python_dir}/bin/python3" -m venv /venv; \
-    . /venv/bin/activate; \
+    source /venv/bin/activate; \
     pip3 install \
         ${CYTHON_DEP} \
         numpy==${NUMPY_VERSION} \
         setuptools \
+        wheel \
         ; \
     #
     # cleanup
@@ -399,7 +400,7 @@ ENV WHEEL_TMP="/wheelhouse-tmp" \
 
 # build wheels
 RUN mkdir -p "${WHEEL_TMP}"; \
-    . /venv/bin/activate; \
+    source /venv/bin/activate; \
     #
     # build gdal wheel
     pip3 wheel gdal==${GDAL_VERSION} --no-binary gdal \

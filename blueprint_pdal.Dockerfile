@@ -207,13 +207,14 @@ RUN \
     #
     # create python venv & add build dependencies
     "${python_dir}/bin/python3" -m venv /venv; \
-    . /venv/bin/activate; \
+    source /venv/bin/activate; \
     pip3 install \
         ninja \
         numpy==${NUMPY_VERSION} \
         pybind11[global] \
         scikit-build \
         scikit-build-core \
+        wheel \
         ; \
     #
     # cleanup
@@ -230,7 +231,7 @@ ENV WHEEL_TMP="/wheelhouse-tmp" \
 
 # build wheels
 RUN mkdir -p "${WHEEL_TMP}"; \
-    . /venv/bin/activate; \
+    source /venv/bin/activate; \
     #
     # download pdal-python
     TAR_FILE="${PDAL_PYTHON_VERSION}.tar.gz"; \
