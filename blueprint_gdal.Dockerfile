@@ -419,6 +419,7 @@ RUN mkdir -p "${WHEEL_TMP}"; \
 # auditwheel
 RUN ls -lah "${WHEEL_TMP}"; \
     mkdir -p "${WHEEL_DIR}"; \
+    shopt -s nocaseglob; \
     auditwheel repair "${WHEEL_TMP}"/gdal*.whl -w "${WHEEL_DIR}"; \
     auditwheel repair "${WHEEL_TMP}"/pyproj*.whl -w "${WHEEL_DIR}"; \
     ls -lah "${WHEEL_DIR}";
