@@ -417,11 +417,11 @@ RUN mkdir -p "${WHEEL_TMP}"; \
     ls -lah "${WHEEL_TMP}";
 
 # auditwheel
-RUN ls -lah "${WHEEL_TMP}"; \
-    mkdir -p "${WHEEL_DIR}"; \
-    shopt -s nocaseglob; \
-    auditwheel repair "${WHEEL_TMP}"/gdal*.whl -w "${WHEEL_DIR}"; \
-    auditwheel repair "${WHEEL_TMP}"/pyproj*.whl -w "${WHEEL_DIR}"; \
+RUN mkdir -p "${WHEEL_DIR}"; \
+    GDAL_WHEEL="$(find "${WHEEL_TMP}" -iname 'gdal*.whl')"; \
+    PYPROJ_WHEEL="$(find "${WHEEL_TMP}" -iname 'pyproj*.whl')"; \
+    auditwheel repair "${GDAL_WHEEL}" -w "${WHEEL_DIR}"; \
+    auditwheel repair "${PYPROJ_WHEEL}" -w "${WHEEL_DIR}"; \
     ls -lah "${WHEEL_DIR}";
 
 
