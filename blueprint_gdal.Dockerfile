@@ -360,23 +360,15 @@ ARG PYTHON_VERSION=3.10.18
 ARG NUMPY_VERSION=2.1.3
 ARG PYPROJ_VERSION=3.7.0
 
-# wheel directory
-ENV WHEEL_DIR="${STAGING_DIR}/usr/local/share/just/wheels"
-
-# local dependencies to /usr/local
-COPY --from=library ${STAGING_DIR}/usr/local /usr/local
-
-# build wheels
-RUN mkdir -p "${WHEEL_DIR}"; \
-    ldconfig; \
-    #
-    # python flavor
+# python venv
+RUN \
+    # python directory
     python_major=${PYTHON_VERSION%%.*}; \
     python_minor=${PYTHON_VERSION#*.}; \
     python_minor=${python_minor%%.*}; \
     python_dir=("/opt/python/cp${python_major}${python_minor}-"cp*[0-9m]); \
     #
-    # pyproj<3.6.1 is incompatible with cython 3+
+    # cython build requirement: pyproj<3.6.1 is incompatible with cython 3+
     # https://github.com/pyproj4/pyproj/issues/1321
     function version_le() { test "$(echo -e "$1\n$2" | sort -V | head -n 1)" == "$1"; }; \
     if version_le "3.6.1" "${PYPROJ_VERSION}"; then \
@@ -385,26 +377,49 @@ RUN mkdir -p "${WHEEL_DIR}"; \
         CYTHON_DEP="cython<3"; \
     fi; \
     #
-    # install python dependencies
-    "${python_dir}/bin/pip" install \
+    # create python venv & add build dependencies
+    "${python_dir}/bin/python3" -m venv /venv; \
+    . /venv/bin/activate; \
+    pip3 install \
         ${CYTHON_DEP} \
         numpy==${NUMPY_VERSION} \
         setuptools \
         ; \
     #
+    # cleanup
+    rm -rf /tmp/*;
+
+# dependencies to /usr/local
+COPY --from=library ${STAGING_DIR}/usr/local /usr/local
+ENV LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+
+# wheel directories
+ENV WHEEL_TMP="/wheelhouse-tmp" \
+    WHEEL_DIR="/wheelhouse"
+
+# build wheels
+RUN mkdir -p "${WHEEL_TMP}"; \
+    . /venv/bin/activate; \
+    #
     # build gdal wheel
-    "${python_dir}/bin/pip" wheel gdal==${GDAL_VERSION} --no-binary gdal \
-        --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
+    pip3 wheel gdal==${GDAL_VERSION} --no-binary gdal \
+        --no-deps --no-build-isolation -w "${WHEEL_TMP}"; \
     #
     # build pyproj wheel
     # While this project already provides manylinux wheels on pypi, building
     # pyproj here ensures the wheel uses the installed libproj & PROJ_VERSION
-    "${python_dir}/bin/pip" wheel pyproj==${PYPROJ_VERSION} --no-binary pyproj \
-        --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
+    pip3 wheel pyproj==${PYPROJ_VERSION} --no-binary pyproj \
+        --no-deps --no-build-isolation -w "${WHEEL_TMP}"; \
     #
     # cleanup
     rm -rf /tmp/*; \
-    ls -la "${WHEEL_DIR}";
+    ls -lah "${WHEEL_TMP}";
+
+# auditwheel
+RUN mkdir -p "${WHEEL_DIR}"; \
+    auditwheel repair "${WHEEL_TMP}"/gdal*.whl -w "${WHEEL_DIR}"; \
+    auditwheel repair "${WHEEL_TMP}"/pyproj*.whl -w "${WHEEL_DIR}"; \
+    ls -lah "${WHEEL_DIR}";
 
 
 # -----------------------------------------------------------------------------
@@ -417,7 +432,9 @@ RUN rm -rf /usr/local/*
 
 # migrate staging directory to /usr/local
 COPY --from=library ${STAGING_DIR}/usr/local /usr/local
-COPY --from=wheel ${STAGING_DIR}/usr/local /usr/local
+
+# store python wheels
+COPY --from=wheel /wheelhouse /wheelhouse
 
 # Patch file for downstream image
 ENV GDAL_PATCH_FILE=/usr/local/share/just/container_build_patch/30_gdal

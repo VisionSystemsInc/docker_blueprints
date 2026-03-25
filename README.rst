@@ -127,15 +127,18 @@ Compiles GDAL v3, including OPENJPEG 2.4, GEOS 3.11.0, libtiff 4.3, libgeotiff 1
          libgeos-c1v5; \
       rm -r /var/lib/apt/lists/*
 
-   # add blueprint
+   # add libraries & command line utilities
    COPY --from=gdal /usr/local /usr/local
+
+   # add manylinux python wheels
+   COPY --from=gdal /wheelhouse /wheelhouse
 
    # Patch all blueprints/recipes
    RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
 
    # install numpy then GDAL python bindings
    RUN pip install numpy==${NUMPY_VERSION}; \
-       pip install /usr/local/share/just/wheels/GDAL*.whl
+       pip install /wheelhouse/gdal*.whl
 
 
 PDAL
@@ -173,16 +176,19 @@ Compiles PDAL v2. Requires GDAL blueprint.
          libgeos-c1v5; \
       rm -r /var/lib/apt/lists/*
 
-   # add blueprint(s)
+   # add libraries & command line utilities
    COPY --from=gdal /usr/local /usr/local
-   COPY --from-pdal /usr/local /usr/local
+   COPY --from=pdal /usr/local /usr/local
+
+   # add manylinux python wheel
+   COPY --from-pdal /wheelhouse /wheelhouse
 
    # Patch all blueprints/recipes
    RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
 
    # install numpy then GDAL python bindings
    RUN pip install numpy==${NUMPY_VERSION}; \
-       pip install /usr/local/share/just/wheels/PDAL*.whl
+       pip install /wheelhouse/pdal*.whl
 
 SWIG bindings for S2Geometry
 ----------------------------
