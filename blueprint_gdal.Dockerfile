@@ -417,7 +417,8 @@ RUN mkdir -p "${WHEEL_TMP}"; \
     ls -lah "${WHEEL_TMP}";
 
 # auditwheel
-RUN mkdir -p "${WHEEL_DIR}"; \
+RUN ls -lah "${WHEEL_TMP}"; \
+    mkdir -p "${WHEEL_DIR}"; \
     auditwheel repair "${WHEEL_TMP}"/gdal*.whl -w "${WHEEL_DIR}"; \
     auditwheel repair "${WHEEL_TMP}"/pyproj*.whl -w "${WHEEL_DIR}"; \
     ls -lah "${WHEEL_DIR}";
