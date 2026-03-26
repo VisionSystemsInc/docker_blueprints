@@ -21,6 +21,12 @@ x-args:
     TINYCUDANN_VERSION: "v2.0"
     TCNN_CUDA_ARCHITECTURES: "70,86"
     TORCH_VERSION: &tinycudann_torch_version "2.9.1+cu129"
+  oepn3d: &open3d_args
+    BUILD_CUDA_MODULE: OFF
+    CMAKE_CUDA_ARCHITECTURES: 86-real
+    CUDA_VERSION: &open3d_cuda_version "12.9.1"
+    OPEN3D_VERSION: "v0.19.0"
+    PYTHON_VERSION: &open3d_python_version "3.13.12"
 
 services:
 
@@ -64,6 +70,14 @@ services:
       args:
         <<: *tinycudann_args
     image: &tinycudann_image vsiri/blueprint_test:tinycudann
+
+  open3d:
+    build:
+      context: ..
+      dockerfile: blueprint_open3d.Dockerfile
+      args:
+        <<: *open3d_args
+    image: &open3d_image vsiri/blueprint_test:open3d
 
   test_gdal:
     build:
@@ -114,3 +128,13 @@ services:
         PYTHON_VERSION: *tinycudann_python_version
         TORCH_VERSION: *tinycudann_torch_version
     image: vsiri/blueprint_test:test_tinycudann
+
+  test_open3d:
+    build:
+      context: .
+      dockerfile: test_open3d.Dockerfile
+      args:
+        OPEN3D_IMAGE: *open3d_image
+        CUDA_VERSION: *open3d_cuda_version
+        PYTHON_VERSION: *open3d_python_version
+    image: vsiri/blueprint_test:test_open3d
