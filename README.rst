@@ -384,6 +384,76 @@ A container using the tinu-cuda-nn wheel must have appropriate versions of pytor
     import torch
     import tinycudann
 
+Python bindings for open3d
+--------------------------
+
+.. code-block:: yaml
+
+   services:
+
+      open3d:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_open3d.Dockerfile
+            args:
+               # BUILD_CUDA_MODULE: ON|OFF
+               # https://www.open3d.org/docs/release/compilation.html#:~:text=To%20build%20Open3D%20with%20CUDA%20support%2C%20configure%20with%3A
+               # CMAKE_CUDA_ARCHITECTURES: 86-real
+               # https://cmake.org/cmake/help/latest/prop_tgt/CUDA_ARCHITECTURES.html#prop_tgt:CUDA_ARCHITECTURES
+               # CUDA_VERSION: "12.9.1"
+               # https://hub.docker.com/r/nvidia/cuda/tags
+               # OPEN3D_VERSION: "v2.0"
+               # https://github.com/isl-org/Open3D/releases
+               # PYTHON_VERSION: "3.13.12"
+               # https://www.python.org/doc/versions/
+               # VSI_RECIPE_REPO: "vsiri/recipe"
+               # https://hub.docker.com/r/vsiri/recipe
+         image: &open3d_image
+            example/project:open3d
+
+      example:
+         build:
+            context: .
+            dockerfile: example.Dockerfile
+            args:
+               OPEN3D_IMAGE: *open3d_image
+         image: example/project:example
+
+========== ======================= ====
+Name       Open3D
+Output dir ``/usr/local``
+Build Args ``BASE_IMAGE``                Base image to build the wheel in. Defaults to ``manylinux_2_28_x86_64``
+..         ``BUILD_CUDA_MODULE``         Build Open3D cuda module
+..         ``CMAKE_CUDA_ARCHITECTURES``  Build Open3D for these CUDA architectures
+..         ``CUDA_VERSION``              Build Open3D for this CUDA version
+..         ``OPEN3D_VERSION``            Open3D version to build from source
+..         ``PYTHON_VERSION``            Build Open3D for this python version
+..         ``VSI_RECIPE_REPO``           VSI docker recipe repo
+========== ======================= ====
+
+Compiles the Open3D wheel for use in python. See [github repo](https://github.com/isl-org/Open3D) for usage details.
+
+A container using the CUDA enabled Open3D wheel must have appropriate versions of CUDA installed.
+
+.. code-block:: Dockerfile
+
+   # global arguments
+   ARG OPEN3D_IMAGE
+   FROM ${OPEN3D_IMAGE} AS open3d
+
+   FROM some_image
+
+   ...
+
+   COPY --from=open3d /usr/local /usr/local
+
+   RUN pip install /usr/local/share/just/wheels/*
+   # Or using pip-tools, add "--find-links /usr/local/share/just/wheels" to requirements.in
+
+.. code-block:: example.py
+
+   import open3d
+
 ---------------------
 Blueprint maintenance
 ---------------------
