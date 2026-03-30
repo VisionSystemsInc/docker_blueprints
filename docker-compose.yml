@@ -91,3 +91,18 @@ services:
         # TORCH_VERSION: "${TORCH_VERSION}"
         # VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
     image: vsiri/blueprint:tinycudann
+
+  # Example
+  open3d:
+    build:
+      context: .
+      dockerfile: blueprint_open3d.Dockerfile
+      args:
+        # BASE_IMAGE: "${BASE_IMAGE}"
+        # BUILD_CUDA_MODULE: ON|OFF
+        # CMAKE_CUDA_ARCHITECTURES: 86-real
+        CUDA_VERSION: "12.9.1"
+        # OPEN3D_VERSION: "${OPEN3D_VERSION}"
+        # PYTHON_VERSION: "${PYTHON_VERSION}"
+        # VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
+    image: vsiri/blueprint:open3d

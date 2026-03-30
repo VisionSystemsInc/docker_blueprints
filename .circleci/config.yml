@@ -8,6 +8,7 @@ x-references:
   build_config: &build_config
     docker:
       - image: cimg/python:3.8
+    # resource_class: medium
     shell: /bin/bash -eo pipefail
     working_directory: ~/vsi
     environment:
@@ -91,7 +92,7 @@ commands:
           command: |
 
             # array of available blueprint services to build
-            BLUEPRINT_SERVICES=( gdal pdal nglog s2 tinycudann )
+            BLUEPRINT_SERVICES=( gdal pdal nglog s2 tinycudann open3d )
 
             # array of test services
             TEST_SERVICES=()

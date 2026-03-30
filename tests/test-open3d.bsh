@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+if [ -z "${VSI_COMMON_DIR+set}" ]; then
+  VSI_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.."; pwd)"
+fi
+
+source "${VSI_COMMON_DIR}/tests/testlib.bsh"
+source "${VSI_COMMON_DIR}/tests/test_utils.bsh"
+
+: ${DOCKER=docker}
+
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "open3d"
+(
+  setup_test
+
+  DOCKER_IMAGE="vsiri/blueprint_test:test_open3d"
+
+  function load_open3d()
+  {
+    local script="if True:
+        import open3d
+        print(open3d.__version__)
+        mesh = open3d.geometry.TriangleMesh.create_sphere()
+        mesh.compute_vertex_normals()
+        print(mesh)
+    "
+    local opts=(
+        --rm
+        # --env LD_LIBRARY_PATH='/usr/local/cuda-12.9/compat'
+        --entrypoint ""
+        "${DOCKER_IMAGE}"
+        /venv/bin/python -c "${script}"
+    )
+    local result="$("${DOCKER}" run "${opts[@]}")"
+    echo "${result}"
+  }
+
+  RESULT="$(load_open3d)"
+  EXPECTED="$(echo -e "0.19.0\nTriangleMesh with 762 points and 1520 triangles.")"
+  assert_str_eq "${RESULT}" "${EXPECTED}"
+)
+end_test
