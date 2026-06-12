@@ -106,3 +106,16 @@ services:
         # PYTHON_VERSION: "${PYTHON_VERSION}"
         # VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
     image: vsiri/blueprint:open3d
+
+  # Example
+  ktx:
+    build:
+      context: .
+      dockerfile: blueprint_ktx.Dockerfile
+      # args:
+      #   BASE_IMAGE: "${BASE_IMAGE}"
+      #   KTX_VERSION: "${OPEN3D_VERSION}"
+      #   PYTHON_VERSION: "${PYTHON_VERSION}"
+      #   VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
+    image: vsiri/blueprint:ktx
+  
