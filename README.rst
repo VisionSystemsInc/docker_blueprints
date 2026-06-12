@@ -454,6 +454,63 @@ A container using the CUDA enabled Open3D wheel must have appropriate versions o
 
    import open3d
 
+KTX (Khronos Texture)
+---------------------
+
+.. code-block:: yaml
+
+   services:
+
+      ktx:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_ktx.Dockerfile
+            args:
+               # KTX_VERSION: "4.4.2"
+               # https://github.com/KhronosGroup/KTX-Software/releases
+               # PYTHON_VERSION: "3.13.12"
+               # https://www.python.org/doc/versions/
+               # VSI_RECIPE_REPO: "vsiri/recipe"
+               # https://hub.docker.com/r/vsiri/recipe
+         image: &s2_image
+            example/project:s2
+
+      example:
+         build:
+            context: .
+            dockerfile: example.Dockerfile
+            args:
+               KTX_IMAGE: *ktx_image
+         image: example/project:example
+
+========== ======================= ====
+Name       KTX
+Output dir ``/usr/local``
+Build Args ``BASE_IMAGE``          Base image to build the wheel in. Defaults to ``manylinux_2_28_x86_64``
+..         ``KTX_VERSION``         KTX version to build from source
+..         ``PYTHON_VERSION``      Build python bindings for this python version
+========== ======================= ====
+
+KTX (Khronos Texture) is a lightweight container for textures for OpenGL, Vulkan and other GPU APIs.  See `github repo <https://github.com/khronosgroup/ktx-software>`__ for usage details.
+
+.. code-block:: Dockerfile
+
+   # global arguments
+   ARG KTX_IMAGE
+   FROM ${KTX_IMAGE} AS ktx
+
+   FROM some_image
+
+   ...
+
+   COPY --from=ktx /usr/local /usr/local
+
+   RUN pip install /usr/local/share/just/wheels/*
+
+.. code-block:: example.py
+
+   import ktx
+
 ---------------------
 Blueprint maintenance
 ---------------------

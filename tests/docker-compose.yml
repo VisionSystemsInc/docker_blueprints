@@ -21,12 +21,15 @@ x-args:
     TINYCUDANN_VERSION: "v2.0"
     TCNN_CUDA_ARCHITECTURES: "70,86"
     TORCH_VERSION: &tinycudann_torch_version "2.9.1+cu129"
-  oepn3d: &open3d_args
+  open3d: &open3d_args
     BUILD_CUDA_MODULE: OFF
     CMAKE_CUDA_ARCHITECTURES: 86-real
     CUDA_VERSION: &open3d_cuda_version "12.9.1"
     OPEN3D_VERSION: "v0.19.0"
     PYTHON_VERSION: &open3d_python_version "3.13.12"
+  ktx: &ktx_args
+    KTX_VERSION: "v4.4.2"
+    PYTHON_VERSION: &ktx_python_version "3.13.12"
 
 services:
 
@@ -78,6 +81,14 @@ services:
       args:
         <<: *open3d_args
     image: &open3d_image vsiri/blueprint_test:open3d
+
+  ktx:
+    build:
+      context: ..
+      dockerfile: blueprint_ktx.Dockerfile
+      args:
+        <<: *ktx_args
+    image: &ktx_image vsiri/blueprint_test:ktx
 
   test_gdal:
     build:
@@ -138,3 +149,12 @@ services:
         CUDA_VERSION: *open3d_cuda_version
         PYTHON_VERSION: *open3d_python_version
     image: vsiri/blueprint_test:test_open3d
+
+  test_ktx:
+    build:
+      context: .
+      dockerfile: test_ktx.Dockerfile
+      args:
+        KTX_IMAGE: *ktx_image
+        PYTHON_VERSION: *ktx_python_version
+    image: vsiri/blueprint_test:test_ktx

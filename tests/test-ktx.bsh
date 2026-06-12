@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+if [ -z "${VSI_COMMON_DIR+set}" ]; then
+  VSI_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.."; pwd)"
+fi
+
+source "${VSI_COMMON_DIR}/tests/testlib.bsh"
+source "${VSI_COMMON_DIR}/tests/test_utils.bsh"
+
+: ${DOCKER=docker}
+
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "ktx"
+(
+  setup_test
+
+  DOCKER_IMAGE="vsiri/blueprint_test:test_ktx"
+
+  # basic pyktx test to ensure pyktx is installed and importable
+  # https://github.com/KhronosGroup/KTX-Software/blob/bc8ec6cd1886446077da884861bf92741558281e/interface/python_binding/tests/test_ktx_texture1.py
+  function test_ktx()
+  {
+    local script='if True:
+      import pyktx
+      info = pyktx.KtxTextureCreateInfo(
+        gl_internal_format=pyktx.GlInternalformat.COMPRESSED_RGBA_ASTC_4x4_KHR,
+        base_width=10,
+        base_height=10,
+        base_depth=1,
+      )
+
+      texture = pyktx.KtxTexture1.create(info, pyktx.KtxTextureCreateStorage.ALLOC)
+      texture.set_image_from_memory(0, 0, 0, bytes(texture.data_size))
+
+      from importlib.metadata import version
+      print(version("pyktx"))
+    '
+    local opts=(
+        --rm
+        "${DOCKER_IMAGE}"
+        /venv/bin/python -c "${script}"
+    )
+    local result="$("${DOCKER}" run "${opts[@]}" 2>&1)"
+    echo "${result}"
+  }
+
+  RESULT="$(test_ktx)"
+  assert_str_eq "${RESULT}" "4.4.2"
+)
+end_test
