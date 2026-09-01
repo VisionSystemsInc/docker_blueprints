@@ -30,6 +30,12 @@ x-args:
   ktx: &ktx_args
     KTX_VERSION: "v4.4.2"
     PYTHON_VERSION: &ktx_python_version "3.13.12"
+  mmcv: &mmcv_args
+    CUDA_VERSION: "12.9.1"
+    MMCV_VERSION: "v2.2.0"
+    PYTHON_VERSION: &mmcv_python_version "3.13.12"
+    TORCH_CUDA_ARCH_LIST: "7.0 8.6"
+    TORCH_VERSION: &mmcv_torch_version "2.9.1+cu129"
 
 services:
 
@@ -89,6 +95,14 @@ services:
       args:
         <<: *ktx_args
     image: &ktx_image vsiri/blueprint_test:ktx
+
+  mmcv:
+    build:
+      context: ..
+      dockerfile: blueprint_mmcv.Dockerfile
+      args:
+        <<: *mmcv_args
+    image: &mmcv_image vsiri/blueprint_test:mmcv
 
   test_gdal:
     build:
@@ -158,3 +172,13 @@ services:
         KTX_IMAGE: *ktx_image
         PYTHON_VERSION: *ktx_python_version
     image: vsiri/blueprint_test:test_ktx
+
+  test_mmcv:
+    build:
+      context: .
+      dockerfile: test_mmcv.Dockerfile
+      args:
+        MMCV_IMAGE: *mmcv_image
+        PYTHON_VERSION: *mmcv_python_version
+        TORCH_VERSION: *mmcv_torch_version
+    image: vsiri/blueprint_test:test_mmcv

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+if [ -z "${VSI_COMMON_DIR+set}" ]; then
+  VSI_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.."; pwd)"
+fi
+
+source "${VSI_COMMON_DIR}/tests/testlib.bsh"
+source "${VSI_COMMON_DIR}/tests/test_utils.bsh"
+
+: ${DOCKER=docker}
+
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "mmcv"
+(
+  setup_test
+
+  DOCKER_IMAGE="vsiri/blueprint_test:test_mmcv"
+
+  # test mmcv import
+  function load_mmcv()
+  {
+    local script="if True:
+      import json
+      import mmcv
+      import mmcv.ops
+      from mmcv.utils import collect_env
+      env_dict = collect_env()
+      print(json.dumps(env_dict, indent=2, default=str))
+    "
+    local opts=(
+      --rm
+      --entrypoint ""
+      "${DOCKER_IMAGE}"
+      python -c "${script}"
+    )
+    local result="$("${DOCKER}" run "${opts[@]}")"
+    echo "${result}"
+  }
+
+  RESULT="$(load_mmcv)"
+  CONTAINS='"MMCV": "2.2.0"'
+  assert_sub_str "${RESULT}" "${CONTAINS}"
+)
+end_test
