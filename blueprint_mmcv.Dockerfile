@@ -23,6 +23,7 @@ RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/
 # dependencies
 RUN dnf install -y \
         ninja-build \
+        gcc-toolset-11 \
         git \
         ; \
     rm -rf /var/cache/yum/*
@@ -65,6 +66,8 @@ ENV FORCE_CUDA="1"
 RUN \
     # activate venv
     source /venv/bin/activate; \
+    # activate gcc-toolset-11 for older cuda/nvcc compatibility
+    set +u && source scl_source enable gcc-toolset-11 && set -u; \
     # Load the CUDA SDK
     source /usr/local/share/just/user_run_patch/10_load_cuda_env; \
     export CUDA_HOME="/usr/local/cuda"; \
