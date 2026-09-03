@@ -36,6 +36,12 @@ x-args:
     PYTHON_VERSION: &mmcv_python_version "3.13.12"
     TORCH_CUDA_ARCH_LIST: "7.0 8.6"
     TORCH_VERSION: &mmcv_torch_version "2.9.1+cu129"
+  mtp: &mtp_args
+    CUDA_VERSION: "12.9.1"
+    MTP_VERSION: "73eb44bb8989158edbc29194f3ca347dc67b2d6b"
+    PYTHON_VERSION: &mtp_python_version "3.13.12"
+    TORCH_CUDA_ARCH_LIST: "7.0 8.6"
+    TORCH_VERSION: &mtp_torch_version "2.9.1+cu129"
 
 services:
 
@@ -103,6 +109,14 @@ services:
       args:
         <<: *mmcv_args
     image: &mmcv_image vsiri/blueprint_test:mmcv
+
+  mtp:
+    build:
+      context: ..
+      dockerfile: blueprint_mtp.Dockerfile
+      args:
+        <<: *mtp_args
+    image: &mtp_image vsiri/blueprint_test:mtp
 
   test_gdal:
     build:
@@ -182,3 +196,13 @@ services:
         PYTHON_VERSION: *mmcv_python_version
         TORCH_VERSION: *mmcv_torch_version
     image: vsiri/blueprint_test:test_mmcv
+
+  test_mtp:
+    build:
+      context: .
+      dockerfile: test_mtp.Dockerfile
+      args:
+        MTP_IMAGE: *mtp_image
+        PYTHON_VERSION: *mtp_python_version
+        TORCH_VERSION: *mtp_torch_version
+    image: vsiri/blueprint_test:test_mtp
