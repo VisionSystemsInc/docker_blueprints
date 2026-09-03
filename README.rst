@@ -511,6 +511,73 @@ KTX (Khronos Texture) is a lightweight container for textures for OpenGL, Vulkan
 
    import ktx
 
+
+MMCV
+----
+
+.. code-block:: yaml
+
+      mmcv:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_mmcv.Dockerfile
+            args:
+               # CUDA_VERSION: "12.9.1"
+               # https://hub.docker.com/r/nvidia/cuda/tags
+               # MMCV_VERSION: "v2.2.0"
+               # https://github.com/open-mmlab/mmcv/tags
+               # PYTHON_VERSION: "3.13.15"
+               # https://hub.docker.com/_/python/tags
+               # TORCH_CUDA_ARCH_LIST: "7.0 8.6"
+               # https://docs.pytorch.org/docs/2.13/cpp_extension.html
+               # TORCH_VERSION: "2.9.1+cu129"
+               # https://download.pytorch.org/whl/torch/
+               # VSI_RECIPE_REPO: "vsiri/recipe"
+               # https://hub.docker.com/r/vsiri/recipe
+         image: &mmcv_image
+            example/project:mmcv
+
+      example:
+         build:
+            context: .
+            dockerfile: example.Dockerfile
+            args:
+               MMCV_IMAGE: *mmcv_image
+         image: example/project:example
+
+========== ============================= ====
+Name       MMCV
+Output dir ``/usr/local``
+Build Args ``BASE_IMAGE``                Base image to build the wheel in. Defaults to latest ``manylinux_2_28_x86_64``
+..         ``CUDA_VERSION``              Build mmcv for this CUDA version
+..         ``MMCV_VERSION``              mmcv version to build from source
+..         ``PYTHON_VERSION``            Build mmcv for this python version
+..         ``TORCH_CUDA_ARCH_LIST``      Build mmcv for these CUDA architectures
+..         ``TORCH_VERSION``             Build mmcv for this CUDA-enabled torch version
+..         ``VSI_RECIPE_REPO``           VSI docker recipe repo
+========== ============================= ====
+
+MMCV is a foundational library for computer vision research.  See `github repo <https://github.com/open-mmlab/mmcv>`__ for usage details.
+
+.. code-block:: Dockerfile
+
+   # global arguments
+   ARG MMCV_IMAGE
+   FROM ${MMCV_IMAGE} AS mmcv
+
+   FROM some_image
+
+   ...
+
+   COPY --from=mmcv /usr/local /usr/local
+
+   RUN pip install /usr/local/share/just/wheels/*
+   # Or using pip-tools, add "--find-links /usr/local/share/just/wheels" to requirements.in
+
+.. code-block:: example.py
+
+    import mmcv
+
 ---------------------
 Blueprint maintenance
 ---------------------

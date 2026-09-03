@@ -118,4 +118,18 @@ services:
       #   PYTHON_VERSION: "${PYTHON_VERSION}"
       #   VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
     image: vsiri/blueprint:ktx
-  
+
+  # Example
+  mmcv:
+    build:
+      context: .
+      dockerfile: blueprint_mmcv.Dockerfile
+      args:
+        # BASE_IMAGE: "${BASE_IMAGE}"
+        CUDA_VERSION: "12.9.1"
+        # MMCV_VERSION: "${MMCV_VERSION}"
+        # PYTHON_VERSION: "${PYTHON_VERSION}"
+        # TORCH_CUDA_ARCH_LIST: "${TORCH_CUDA_ARCH_LIST}"
+        # TORCH_VERSION: "${TORCH_VERSION}"
+        # VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
+    image: vsiri/blueprint:mmcv
