@@ -92,7 +92,7 @@ commands:
           command: |
 
             # array of available blueprint services to build
-            BLUEPRINT_SERVICES=( gdal pdal nglog s2 tinycudann open3d ktx mmcv )
+            BLUEPRINT_SERVICES=( gdal pdal nglog s2 tinycudann open3d ktx mmcv mtp )
 
             # array of test services
             TEST_SERVICES=()

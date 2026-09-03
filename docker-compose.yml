@@ -133,3 +133,18 @@ services:
         # TORCH_VERSION: "${TORCH_VERSION}"
         # VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
     image: vsiri/blueprint:mmcv
+
+  # Example
+  mtp:
+    build:
+      context: .
+      dockerfile: blueprint_mtp.Dockerfile
+      args:
+        # BASE_IMAGE: "${BASE_IMAGE}"
+        CUDA_VERSION: "12.9.1"
+        # MTP_VERSION: "${MTP_VERSION}"
+        # PYTHON_VERSION: "${PYTHON_VERSION}"
+        # TORCH_CUDA_ARCH_LIST: "${TORCH_CUDA_ARCH_LIST}"
+        # TORCH_VERSION: "${TORCH_VERSION}"
+        # VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
+    image: vsiri/blueprint:mtp

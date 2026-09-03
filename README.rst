@@ -578,6 +578,76 @@ MMCV is a foundational library for computer vision research.  See `github repo <
 
     import mmcv
 
+MTP with DCNv3
+--------------
+
+.. code-block:: yaml
+
+      mtp:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_mtp.Dockerfile
+            args:
+               # CUDA_VERSION: "12.9.1"
+               # https://hub.docker.com/r/nvidia/cuda/tags
+               # MTP_VERSION: "73eb44bb8989158edbc29194f3ca347dc67b2d6b"
+               # https://github.com/VisionSystemsInc/MTP
+               # PYTHON_VERSION: "3.13.15"
+               # https://hub.docker.com/_/python/tags
+               # TORCH_CUDA_ARCH_LIST: "7.0 8.6"
+               # https://docs.pytorch.org/docs/2.13/cpp_extension.html
+               # TORCH_VERSION: "2.9.1+cu129"
+               # https://download.pytorch.org/whl/torch/
+               # VSI_RECIPE_REPO: "vsiri/recipe"
+               # https://hub.docker.com/r/vsiri/recipe
+         image: &mtp_image
+            example/project:mtp
+
+      example:
+         build:
+            context: .
+            dockerfile: example.Dockerfile
+            args:
+               MTP_IMAGE: *mtp_image
+         image: example/project:example
+
+========== ============================= ====
+Name       Multi-Task Pretraining (MTP)
+Output dir ``/usr/local``
+Build Args ``BASE_IMAGE``                Base image to build the wheel in. Defaults to latest ``manylinux_2_28_x86_64``
+..         ``CUDA_VERSION``              Build MTP for this CUDA version
+..         ``MTP_VERSION``               MTRP version to build from source
+..         ``PYTHON_VERSION``            Build MTP for this python version
+..         ``TORCH_CUDA_ARCH_LIST``      Build MTP for these CUDA architectures
+..         ``TORCH_VERSION``             Build MTP for this CUDA-enabled torch version
+..         ``VSI_RECIPE_REPO``           VSI docker recipe repo
+========== ============================= ====
+
+Multi-Task Pretraining (MTP) explores a new paradigm for remote sensing foundation model pretraining. See `github fork <https://github.com/VisionSystemsInc/MTP>`__ for usage details.
+
+This blueprint provides a python wheel for Deformable Convolution v3 (DCNv3) compiled as a torch extension, as well as MTP "heads" for python packages such as mmrotate and mmsegmentation.
+
+.. code-block:: Dockerfile
+
+   # global arguments
+   ARG MTP_IMAGE
+   FROM ${MTP_IMAGE} AS mtp
+
+   FROM some_image
+
+   ...
+
+   COPY --from=mtp /usr/local /usr/local
+
+   RUN pip install /usr/local/share/just/wheels/*
+   # Or using pip-tools, add "--find-links /usr/local/share/just/wheels" to requirements.in
+
+.. code-block:: example.py
+
+   import torch
+   import DCNv3
+
+
 ---------------------
 Blueprint maintenance
 ---------------------
