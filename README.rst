@@ -550,14 +550,14 @@ Name       MMCV
 Output dir ``/usr/local``
 Build Args ``BASE_IMAGE``                Base image to build the wheel in. Defaults to latest ``manylinux_2_28_x86_64``
 ..         ``CUDA_VERSION``              Build mmcv for this CUDA version
-..         ``MMCV_VERSION``              Build mmcv for this CUDA version
+..         ``MMCV_VERSION``              mmcv version to build from source
 ..         ``PYTHON_VERSION``            Build mmcv for this python version
 ..         ``TORCH_CUDA_ARCH_LIST``      Build mmcv for these CUDA architectures
 ..         ``TORCH_VERSION``             Build mmcv for this CUDA-enabled torch version
 ..         ``VSI_RECIPE_REPO``           VSI docker recipe repo
 ========== ============================= ====
 
-MMCV is a foundational library for computer vision research .  See `github repo <https://github.com/open-mmlab/mmcv>`__ for usage details.
+MMCV is a foundational library for computer vision research.  See `github repo <https://github.com/open-mmlab/mmcv>`__ for usage details.
 
 .. code-block:: Dockerfile
 
