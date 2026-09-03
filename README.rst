@@ -616,7 +616,7 @@ Name       Multi-Task Pretraining (MTP)
 Output dir ``/usr/local``
 Build Args ``BASE_IMAGE``                Base image to build the wheel in. Defaults to latest ``manylinux_2_28_x86_64``
 ..         ``CUDA_VERSION``              Build MTP for this CUDA version
-..         ``MTP_VERSION``               MTRP version to build from source
+..         ``MTP_VERSION``               MTP version to build from source
 ..         ``PYTHON_VERSION``            Build MTP for this python version
 ..         ``TORCH_CUDA_ARCH_LIST``      Build MTP for these CUDA architectures
 ..         ``TORCH_VERSION``             Build MTP for this CUDA-enabled torch version

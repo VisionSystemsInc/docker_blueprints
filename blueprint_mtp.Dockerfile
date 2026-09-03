@@ -64,7 +64,7 @@ RUN \
     # isolated copy of DCNv3 source code
     cp -r "${MTP_DIR}/RS_Tasks_Finetune/Rotated_Detection/mmrotate1.x/mmrotate/models/backbones/ops_dcnv3" "${DCNV3_DIR}"; \
     # cleanup all copies of DCNv3 source code from MTP repo, leaving only "functions" and "modules"
-    find /mtp -type d -name 'ops_dcnv3' -exec \
+    find "${MTP_DIR}" -type d -name 'ops_dcnv3' -exec \
         bash -O extglob -c 'rm -rf "$1"/!(functions|modules)' _ {} \; ;
 
 # build DCNv3 wheel and save to wheelhouse-tmp
