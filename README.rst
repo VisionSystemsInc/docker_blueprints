@@ -647,6 +647,65 @@ This blueprint provides a python wheel for Deformable Convolution v3 (DCNv3) com
    import torch
    import DCNv3
 
+pymeshlab
+---------
+
+.. code-block:: yaml
+
+   services:
+
+      pymeshlab:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_pymeshlab.Dockerfile
+            args:
+               # PYMESHLAB_VERSION: "v2025.7.post1"
+               # https://github.com/cnr-isti-vclab/PyMeshLab/releases
+               # PYTHON_VERSION: "3.13.12"
+               # https://github.com/pypa/manylinux/blob/main/docker/Dockerfile
+               # BASE_IMAGE: "quay.io/pypa/manylinux_2_28_x86_64"
+               # https://quay.io/repository/pypa/manylinux_2_28_x86_64?tab=tags&tag=latest
+         image: &pymeshlab_image
+            example/project:pymeshlab
+
+      example:
+         build:
+            context: .
+            dockerfile: example.Dockerfile
+            args:
+               PYMESHLAB_IMAGE: *pymeshlab_image
+         image: example/project:example
+
+========== ======================= ====
+Name       pymeshlab
+Output dir ``/usr/local``
+Build Args ``BASE_IMAGE``          Base image to build the wheel in. Default: `quay.io/pypa/manylinux_2_28_x86_64`
+..         ``PYMESHLAB_VERSION``   Build this pymeshlab version
+..         ``PYTHON_VERSION``      Build pymeshlab for this python version
+========== ======================= ====
+
+`PyMeshLab <https://github.com/cnr-isti-vclab/PyMeshLab>`__ is a Python library that interfaces to
+`MeshLab <https://github.com/cnr-isti-vclab/meshlab>`__, an open source application for editing and
+processing large 3D triangle meshes.
+
+.. code-block:: Dockerfile
+
+   # global arguments
+   ARG PYMESHLAB_IMAGE
+   FROM ${PYMESHLAB_IMAGE} AS pymeshlab
+
+   FROM some_image
+
+   ...
+
+   COPY --from=pymeshlab /usr/local /usr/local
+
+   RUN pip install /usr/local/share/just/wheels/*
+
+.. code-block:: example.py
+
+    import pymeshlab
+
 
 ---------------------
 Blueprint maintenance
