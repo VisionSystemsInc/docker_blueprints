@@ -148,3 +148,15 @@ services:
         # TORCH_VERSION: "${TORCH_VERSION}"
         # VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
     image: vsiri/blueprint:mtp
+
+  # Example
+  pymeshlab:
+    build:
+      context: .
+      dockerfile: blueprint_pymeshlab.Dockerfile
+      args:
+        # BASE_IMAGE: "${BASE_IMAGE}"
+        # PYMESHLAB_VERSION: "${PYMESHLAB_VERSION}"
+        # PYTHON_VERSION: "${PYTHON_VERSION}"
+        # VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
+    image: vsiri/blueprint:pymeshlab

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+if [ -z "${VSI_COMMON_DIR+set}" ]; then
+  VSI_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.."; pwd)"
+fi
+
+source "${VSI_COMMON_DIR}/tests/testlib.bsh"
+source "${VSI_COMMON_DIR}/tests/test_utils.bsh"
+
+: ${DOCKER=docker}
+
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "pymeshlab"
+(
+  setup_test
+
+  DOCKER_IMAGE="vsiri/blueprint_test:test_pymeshlab"
+
+  # test pymeshlab import
+  function load_pymeshlab()
+  {
+
+    # run unit tests
+    # skip test_texture_map_defragmentation which requires a GPU
+    local bash_script="
+      source /venv/bin/activate
+      pytest --pyargs pymeshlab -k 'not test_texture_map_defragmentation'
+      echo 'pymeshlab success'
+    "
+    local opts=(
+      --rm
+      "${DOCKER_IMAGE}"
+      bash -c "${bash_script}"
+    )
+    local result="$("${DOCKER}" run "${opts[@]}")"
+    echo "${result}"
+  }
+
+  RESULT="$(load_pymeshlab)"
+  ENDS='pymeshlab success'
+  assert_ends_with "${RESULT}" "${ENDS}"
+)
+end_test
