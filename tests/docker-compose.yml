@@ -42,6 +42,9 @@ x-args:
     PYTHON_VERSION: &mtp_python_version "3.13.12"
     TORCH_CUDA_ARCH_LIST: "7.0 8.6"
     TORCH_VERSION: &mtp_torch_version "2.9.1+cu129"
+  pymeshlab: &pymeshlab_args
+    PYMESHLAB_VERSION: "v2025.7.post1"
+    PYTHON_VERSION: &pymeshlab_python_version "3.13.12"
 
 services:
 
@@ -117,6 +120,14 @@ services:
       args:
         <<: *mtp_args
     image: &mtp_image vsiri/blueprint_test:mtp
+
+  pymeshlab:
+    build:
+      context: ..
+      dockerfile: blueprint_pymeshlab.Dockerfile
+      args:
+        <<: *pymeshlab_args
+    image: &pymeshlab_image vsiri/blueprint_test:pymeshlab
 
   test_gdal:
     build:
@@ -206,3 +217,12 @@ services:
         PYTHON_VERSION: *mtp_python_version
         TORCH_VERSION: *mtp_torch_version
     image: vsiri/blueprint_test:test_mtp
+
+  test_pymeshlab:
+    build:
+      context: .
+      dockerfile: test_pymeshlab.Dockerfile
+      args:
+        PYMESHLAB_IMAGE: *pymeshlab_image
+        PYTHON_VERSION: *pymeshlab_python_version
+    image: vsiri/blueprint_test:test_pymeshlab
