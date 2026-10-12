@@ -706,6 +706,70 @@ processing large 3D triangle meshes.
 
     import pymeshlab
 
+Segment Anything Model 2 (SAM2)
+--------------------------------
+
+.. code-block:: yaml
+
+      sam2:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_sam2.Dockerfile
+            args:
+               # CUDA_VERSION: "12.9.1"
+               # https://hub.docker.com/r/nvidia/cuda/tags
+               # PYTHON_VERSION: "3.13.15"
+               # https://hub.docker.com/_/python/tags
+               # SAM2_VERSION: "2b90b9f5ceec907a1c18123530e92e794ad901a4"
+               # https://github.com/facebookresearch/sam2
+               # TORCH_CUDA_ARCH_LIST: "7.0 8.6"
+               # https://docs.pytorch.org/docs/2.13/cpp_extension.html
+               # TORCH_VERSION: "2.9.1+cu129"
+               # https://download.pytorch.org/whl/torch/
+               # VSI_RECIPE_REPO: "vsiri/recipe"
+               # https://hub.docker.com/r/vsiri/recipe
+         image: &sam2_image
+            example/project:sam2
+
+      example:
+         build:
+            context: .
+            dockerfile: example.Dockerfile
+            args:
+               SAM2_IMAGE: *sam2_image
+         image: example/project:example
+
+========== =============================== ====
+Name       Segment Anything Model 2 (SAM2)
+Output dir ``/usr/local``
+Build Args ``BASE_IMAGE``                  Base image to build the wheel in. Defaults to latest ``manylinux_2_28_x86_64``
+..         ``CUDA_VERSION``                Build SAM2 for this CUDA version
+..         ``PYTHON_VERSION``              Build SAM2 for this python version
+..         ``SAM2_VERSION``                SAM2 version to build from source
+..         ``TORCH_CUDA_ARCH_LIST``        Build SAM2 for these CUDA architectures
+..         ``TORCH_VERSION``               Build SAM2 for this CUDA-enabled torch version
+..         ``VSI_RECIPE_REPO``             VSI docker recipe repo
+========== =============================== ====
+
+`Segment Anything Model 2 (SAM2) <https://github.com/facebookresearch/sam2>`__ is a foundation model towards solving promptable visual segmentation in images and videos.
+
+.. code-block:: Dockerfile
+
+   # global arguments
+   ARG SAM2_IMAGE
+   FROM ${SAM2_IMAGE} AS sam2
+
+   FROM some_image
+
+   ...
+
+   COPY --from=sam2 /usr/local /usr/local
+   RUN pip install /usr/local/share/just/wheels/*
+
+.. code-block:: example.py
+
+   import torch
+   import sam2
 
 ---------------------
 Blueprint maintenance

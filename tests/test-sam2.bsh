@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+if [ -z "${VSI_COMMON_DIR+set}" ]; then
+  VSI_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.."; pwd)"
+fi
+
+source "${VSI_COMMON_DIR}/tests/testlib.bsh"
+source "${VSI_COMMON_DIR}/tests/test_utils.bsh"
+
+: ${DOCKER=docker}
+
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "sam2"
+(
+  setup_test
+
+  DOCKER_IMAGE="vsiri/blueprint_test:test_sam2"
+
+  # test sam2 import
+  function load_sam2()
+  {
+    local script="if True:
+      import torch
+      from sam2.build_sam import build_sam2
+      print('success')
+    "
+    local opts=(
+      --rm
+      --entrypoint ""
+      "${DOCKER_IMAGE}"
+      python -c "${script}"
+    )
+    local result="$("${DOCKER}" run "${opts[@]}")"
+    echo "${result}"
+  }
+
+  RESULT="$(load_sam2)"
+  EXPECTED='success'
+  assert_str_eq "${RESULT}" "${EXPECTED}"
+)
+end_test
