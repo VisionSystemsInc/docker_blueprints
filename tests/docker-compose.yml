@@ -45,6 +45,12 @@ x-args:
   pymeshlab: &pymeshlab_args
     PYMESHLAB_VERSION: "v2025.7.post1"
     PYTHON_VERSION: &pymeshlab_python_version "3.13.12"
+  sam2: &sam2_args
+    CUDA_VERSION: "12.9.1"
+    PYTHON_VERSION: &sam2_python_version "3.13.12"
+    SAM2_VERSION: "2b90b9f5ceec907a1c18123530e92e794ad901a4"
+    TORCH_CUDA_ARCH_LIST: "7.0 8.6"
+    TORCH_VERSION: &sam2_torch_version "2.9.1+cu129"
 
 services:
 
@@ -128,6 +134,14 @@ services:
       args:
         <<: *pymeshlab_args
     image: &pymeshlab_image vsiri/blueprint_test:pymeshlab
+
+  sam2:
+    build:
+      context: ..
+      dockerfile: blueprint_sam2.Dockerfile
+      args:
+        <<: *sam2_args
+    image: &sam2_image vsiri/blueprint_test:sam2
 
   test_gdal:
     build:
@@ -226,3 +240,13 @@ services:
         PYMESHLAB_IMAGE: *pymeshlab_image
         PYTHON_VERSION: *pymeshlab_python_version
     image: vsiri/blueprint_test:test_pymeshlab
+
+  test_sam2:
+    build:
+      context: .
+      dockerfile: test_sam2.Dockerfile
+      args:
+        PYTHON_VERSION: *sam2_python_version
+        SAM2_IMAGE: *sam2_image
+        TORCH_VERSION: *sam2_torch_version
+    image: vsiri/blueprint_test:test_sam2
