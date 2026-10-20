@@ -118,7 +118,7 @@ begin_test "GDAL vertical datum"
 
   ls -lah "${TESTDIR}" >&2
 
-  RESULT="$(run_gdal "python /test/script.py")"
+  RESULT="$(run_gdal "ls -lah /; ls -lah /test; python /test/script.py")"
   assert_str_eq "${RESULT}" "success"
 )
 end_test
