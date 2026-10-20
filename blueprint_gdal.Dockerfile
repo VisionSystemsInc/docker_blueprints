@@ -21,12 +21,21 @@
 
 # global args
 ARG BASE_IMAGE="quay.io/pypa/manylinux_2_28_x86_64:2025.09.28-1"
+ARG GDAL_VERSION="3.13.3"
 
 # base image
 FROM ${BASE_IMAGE} AS base
 
 # Set shell to bash
 SHELL ["/usr/bin/env", "/bin/bash", "-euxvc"]
+
+# general build dependencies
+RUN dnf install -y \
+        libcurl-devel \
+        libjpeg-turbo-devel \
+        zlib-devel \
+        ; \
+    rm -rf /var/cache/dnf/*
 
 # staging & reporting directories, reused by each stage
 ENV STAGING_DIR="/staging"
@@ -68,7 +77,7 @@ RUN cp -r /opt/_internal/sqlite3/* "${STAGING_DIR}/usr/local"; \
 FROM base AS openjpeg
 
 # version argument
-ARG OPENJPEG_VERSION=2.5.2
+ARG OPENJPEG_VERSION="2.5.4"
 
 # install
 RUN \
@@ -143,7 +152,7 @@ RUN --mount=type=bind,source=resources,target=/resources,readonly \
 FROM base AS geos
 
 # version argument
-ARG GEOS_VERSION=3.13.0
+ARG GEOS_VERSION="3.14.1"
 
 # install
 RUN \
@@ -174,14 +183,7 @@ RUN \
 FROM base AS tiff
 
 # version argument
-ARG TIFF_VERSION=4.7.0
-
-# additional build dependencies
-RUN ulimit -n 1024; \
-    yum install -y \
-      libjpeg-turbo-devel \
-      zlib-devel; \
-    yum clean all
+ARG TIFF_VERSION="4.7.2"
 
 # install
 RUN \
@@ -203,25 +205,17 @@ RUN \
 
 
 # -----------------------------------------------------------------------------
-# PROJ v6
+# PROJ
 # -----------------------------------------------------------------------------
-# install instructions: https://proj.org/install.html
+# https://proj.org/install.html
 FROM base AS proj
 
 # version argument
-ARG PROJ_VERSION=9.4.1
+ARG PROJ_VERSION="9.8.1"
 
-# additional build dependencies
-RUN ulimit -n 1024; \
-    yum install -y \
-      libcurl-devel \
-      libjpeg-turbo-devel \
-      zlib-devel; \
-    yum clean all
-
-# local dependencies to staging directory
-COPY --from=sqlite3 ${STAGING_DIR} ${STAGING_DIR}
-COPY --from=tiff ${STAGING_DIR} ${STAGING_DIR}
+# local dependencies
+COPY --from=sqlite3 ${STAGING_DIR}/usr/local /usr/local
+COPY --from=tiff ${STAGING_DIR}/usr/local /usr/local
 
 # install
 RUN \
@@ -233,7 +227,6 @@ RUN \
     # configure, build, & install
     mkdir build; cd build; \
     cmake .. \
-        -DCMAKE_PREFIX_PATH="${STAGING_DIR}/usr/local" \
         -DCMAKE_INSTALL_LIBDIR="lib" \
         -DBUILD_SHARED_LIBS=ON \
         -DCMAKE_BUILD_TYPE=Release \
@@ -255,17 +248,9 @@ RUN \
 FROM base AS geotiff
 
 # version argument
-ARG GEOTIFF_VERSION=1.7.3
+ARG GEOTIFF_VERSION="1.7.4"
 
-# additional build dependencies
-RUN ulimit -n 1024; \
-    yum install -y \
-      libcurl-devel \
-      libjpeg-turbo-devel \
-      zlib-devel; \
-    yum clean all
-
-# local dependencies to staging directory
+# local dependencies
 COPY --from=tiff ${STAGING_DIR}/usr/local /usr/local
 COPY --from=proj ${STAGING_DIR}/usr/local /usr/local
 
@@ -291,39 +276,10 @@ RUN \
 
 
 # -----------------------------------------------------------------------------
-# GDAL setup for build
+# CONSOLIDATED DEPENDENCIES
 # -----------------------------------------------------------------------------
-FROM base AS setup
+FROM base AS deps
 
-# version argument
-# note cmake build system used here was introduced in 3.5.0
-# https://github.com/OSGeo/gdal/releases/tag/v3.5.0
-ARG GDAL_VERSION=3.9.3
-ENV GDAL_VERSION=$GDAL_VERSION
-
-# additional build dependencies
-RUN ulimit -n 1024; \
-    yum install -y \
-      libcurl-devel \
-      libjpeg-turbo-devel \
-      zlib-devel; \
-    yum clean all
-
-# download & unzip
-RUN TAR_FILE="gdal-${GDAL_VERSION}.tar.gz"; \
-    curl -fsSLO "https://download.osgeo.org/gdal/${GDAL_VERSION}/${TAR_FILE}"; \
-    tar -xf "${TAR_FILE}" --strip-components=1; \
-    rm "${TAR_FILE}"
-
-
-# -----------------------------------------------------------------------------
-# GDAL build library
-# -----------------------------------------------------------------------------
-FROM setup AS library
-
-# local dependencies to staging directory
-# base manylinux image has many other dependencies already in /usr/local,
-# so we isolate packages in the staging directory
 COPY --from=sqlite3 ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=openjpeg ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=ecw ${STAGING_DIR} ${STAGING_DIR}
@@ -332,11 +288,29 @@ COPY --from=tiff ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=proj ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=geotiff ${STAGING_DIR} ${STAGING_DIR}
 
+
+# -----------------------------------------------------------------------------
+# GDAL
+# -----------------------------------------------------------------------------
+FROM base AS gdal
+
+# package versions
+ARG GDAL_VERSION
+
+# local dependencies
+COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
+
+# download & unzip
+RUN TAR_FILE="gdal-${GDAL_VERSION}.tar.gz"; \
+    curl -fsSLO "https://download.osgeo.org/gdal/${GDAL_VERSION}/${TAR_FILE}"; \
+    tar -xf "${TAR_FILE}" --strip-components=1; \
+    rm "${TAR_FILE}"
+
 # configure, build, & install
 # https://raw.githubusercontent.com/OSGeo/gdal/master/gdal/configure
 RUN mkdir build; cd build; \
     cmake .. \
-        -D CMAKE_PREFIX_PATH="${STAGING_DIR}/usr/local;${STAGING_DIR}/usr/local/ecw" \
+        -D CMAKE_PREFIX_PATH="/usr/local;/usr/local/ecw" \
         -D CMAKE_BUILD_TYPE=Release \
         -D BUILD_PYTHON_BINDINGS=OFF \
         -D GDAL_USE_PCRE=OFF \
@@ -351,31 +325,65 @@ RUN mkdir build; cd build; \
 
 
 # -----------------------------------------------------------------------------
-# GDAL build wheel
+# BASE WHEELHOUSE
 # -----------------------------------------------------------------------------
-FROM setup AS wheel
+from base as wheel
 
-# version argument
-ARG PYTHON_VERSION=3.10.18
-ARG NUMPY_VERSION=2.1.3
-ARG PYPROJ_VERSION=3.7.0
+# local dependencies
+COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
 
-# wheel directory
-ENV WHEEL_DIR="${STAGING_DIR}/usr/local/share/just/wheels"
-
-# local dependencies to /usr/local
-COPY --from=library ${STAGING_DIR}/usr/local /usr/local
-
-# build wheels
-RUN mkdir -p "${WHEEL_DIR}"; \
-    ldconfig; \
-    #
-    # python flavor
-    python_major=${PYTHON_VERSION%%.*}; \
+# python selection & venv
+ARG PYTHON_VERSION="3.13.15"
+RUN python_major=${PYTHON_VERSION%%.*}; \
     python_minor=${PYTHON_VERSION#*.}; \
     python_minor=${python_minor%%.*}; \
     python_dir=("/opt/python/cp${python_major}${python_minor}-"cp*[0-9m]); \
     #
+    # python venv with build dependencies
+    "${python_dir}/bin/python3" -m venv /venv; \
+    source /venv/bin/activate; \
+    pip install pybind11[global] setuptools;
+
+
+# -----------------------------------------------------------------------------
+# GDAL python wheel
+# -----------------------------------------------------------------------------
+FROM wheel AS gdal-wheel
+
+# version argument
+ARG GDAL_VERSION
+ARG NUMPY_VERSION="2.3.5"
+
+# local dependencies
+COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
+COPY --from=gdal ${STAGING_DIR}/usr/local /usr/local
+
+# python dependencies
+RUN source /venv/bin/activate; \
+    pip install "numpy==${NUMPY_VERSION}"
+
+# pip wheel
+RUN source /venv/bin/activate; \
+    pip wheel "gdal==${GDAL_VERSION}" -w /wheelhouse \
+        --no-binary :all: --no-deps --no-build-isolation;
+
+
+# -----------------------------------------------------------------------------
+# PYPROJ python wheel
+# -----------------------------------------------------------------------------
+# While pyproj project already provides manylinux wheels on pypi, building
+# here ensures the wheel uses the same library versions
+FROM wheel AS pyproj-wheel
+
+# version argument
+ARG PYPROJ_VERSION="3.7.2"
+
+# local dependencies
+COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
+RUN ldconfig
+
+# python dependencies
+RUN \
     # pyproj<3.6.1 is incompatible with cython 3+
     # https://github.com/pyproj4/pyproj/issues/1321
     function version_le() { test "$(echo -e "$1\n$2" | sort -V | head -n 1)" == "$1"; }; \
@@ -386,25 +394,13 @@ RUN mkdir -p "${WHEEL_DIR}"; \
     fi; \
     #
     # install python dependencies
-    "${python_dir}/bin/pip" install \
-        ${CYTHON_DEP} \
-        numpy==${NUMPY_VERSION} \
-        setuptools \
-        ; \
-    #
-    # build gdal wheel
-    "${python_dir}/bin/pip" wheel gdal==${GDAL_VERSION} --no-binary gdal \
-        --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
-    #
-    # build pyproj wheel
-    # While this project already provides manylinux wheels on pypi, building
-    # pyproj here ensures the wheel uses the installed libproj & PROJ_VERSION
-    "${python_dir}/bin/pip" wheel pyproj==${PYPROJ_VERSION} --no-binary pyproj \
-        --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
-    #
-    # cleanup
-    rm -rf /tmp/*; \
-    ls -la "${WHEEL_DIR}";
+    source /venv/bin/activate; \
+    pip install "${CYTHON_DEP}";
+
+# pip wheel
+RUN source /venv/bin/activate; \
+    pip wheel "pyproj==${PYPROJ_VERSION}" -w /wheelhouse \
+        --no-binary :all: --no-deps --no-build-isolation;
 
 
 # -----------------------------------------------------------------------------
@@ -415,11 +411,16 @@ FROM base
 # clear /usr/local of all other packages
 RUN rm -rf /usr/local/*
 
-# migrate staging directory to /usr/local
-COPY --from=library ${STAGING_DIR}/usr/local /usr/local
-COPY --from=wheel ${STAGING_DIR}/usr/local /usr/local
+# wheels
+ENV WHEEL_DIR="/usr/local/share/just/wheels"
+COPY --from=gdal-wheel /wheelhouse "${WHEEL_DIR}"
+COPY --from=pyproj-wheel /wheelhouse "${WHEEL_DIR}"
+
+# local dependencies
+COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
+COPY --from=gdal ${STAGING_DIR}/usr/local /usr/local
 
 # Patch file for downstream image
 ENV GDAL_PATCH_FILE=/usr/local/share/just/container_build_patch/30_gdal
-ADD 30_gdal ${GDAL_PATCH_FILE}
+COPY 30_gdal ${GDAL_PATCH_FILE}
 RUN chmod +x ${GDAL_PATCH_FILE}
