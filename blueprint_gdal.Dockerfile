@@ -21,6 +21,7 @@
 
 # global args
 ARG BASE_IMAGE="quay.io/pypa/manylinux_2_28_x86_64:2025.09.28-1"
+ARG GDAL_VERSION="3.13.3"
 
 # base image
 FROM ${BASE_IMAGE} AS base
@@ -294,7 +295,7 @@ COPY --from=geotiff ${STAGING_DIR} ${STAGING_DIR}
 FROM base AS gdal
 
 # package versions
-ARG GDAL_VERSION="3.13.3"
+ARG GDAL_VERSION
 
 # local dependencies
 COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
