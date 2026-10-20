@@ -32,6 +32,15 @@ FROM ${BASE_IMAGE} AS base
 # Set shell to bash
 SHELL ["/usr/bin/env", "/bin/bash", "-euxvc"]
 
+# general build dependencies
+RUN dnf install -y \
+        libcurl-devel \
+        libjpeg-turbo-devel \
+        libxml2-devel \
+        zlib-devel \
+        ; \
+    rm -rf /var/cache/dnf/*
+
 # staging & reporting directories, reused by each stage
 ENV STAGING_DIR="/staging"
 ENV REPORT_DIR="${STAGING_DIR}/usr/local/share/just/info"
@@ -50,7 +59,7 @@ WORKDIR /tmp
 FROM base AS laszip
 
 # version argument
-ARG LASZIP_VERSION=3.4.4
+ARG LASZIP_VERSION="3.5.0"
 
 # install
 RUN \
@@ -76,7 +85,7 @@ RUN \
 FROM base AS lazperf
 
 # version argument
-ARG LAZPERF_VERSION=3.4.0
+ARG LAZPERF_VERSION="3.4.0"
 
 # install
 RUN \
@@ -127,39 +136,27 @@ RUN \
 
 
 # -----------------------------------------------------------------------------
-# PDAL setup for build
+# CONSOLIDATED DEPENDENCIES
 # -----------------------------------------------------------------------------
-FROM base AS setup
+FROM base AS deps
 
-# version argument
-ARG PDAL_VERSION=2.8.3
-ENV PDAL_VERSION=${PDAL_VERSION}
-
-# additional build dependencies
-RUN ulimit -n 1024; \
-    yum install -y \
-      libcurl-devel \
-      libjpeg-turbo-devel \
-      libxml2-devel \
-      zlib-devel; \
-    yum clean all
-
-
-# -----------------------------------------------------------------------------
-# PDAL build library
-# -----------------------------------------------------------------------------
-FROM setup AS library
-
-# local dependencies to staging directory
-# the base has many other dependencies already in /usr/local,
-# so we isolate packages in a staging directory
 COPY --from=laszip ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=lazperf ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=nitro ${STAGING_DIR} ${STAGING_DIR}
 
-# copy GDAL to /usr/local - GDAL will be copied into downstream dockers
-# independently, and should not be added to staging
+
+# -----------------------------------------------------------------------------
+# PDAL
+# -----------------------------------------------------------------------------
+FROM base AS pdal
+
+# version argument
+ARG PDAL_VERSION="2.10.1"
+ENV PDAL_VERSION=${PDAL_VERSION}
+
+# local dependencies
 COPY --from=gdal /usr/local /usr/local
+COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
 
 # install
 RUN \
@@ -170,7 +167,7 @@ RUN \
     #
     # configure, build, & install
     cmake . \
-        -D CMAKE_PREFIX_PATH="${STAGING_DIR}/usr/local;/usr/local" \
+        -D CMAKE_PREFIX_PATH="/usr/local" \
         -D CMAKE_BUILD_TYPE=Release \
         -D WITH_LASZIP=ON \
         -D WITH_LAZPERF=ON \
@@ -187,61 +184,52 @@ RUN \
 
 
 # -----------------------------------------------------------------------------
-# PDAL build wheel
+# PDAL python wheel
 # -----------------------------------------------------------------------------
-FROM setup AS wheel
+FROM base AS wheel
 
 # version arguments
 # note pdal-python is hosted/versioned separately from PDAL
-ARG PDAL_PYTHON_VERSION=3.4.5
-ARG PYTHON_VERSION=3.10.18
-ARG NUMPY_VERSION=2.1.3
-
-# wheel directory
-ENV WHEEL_DIR="${STAGING_DIR}/usr/local/share/just/wheels"
+ARG NUMPY_VERSION="2.3.5"
+ARG PDAL_PYTHON_VERSION="3.5.5"
+ARG PYTHON_VERSION="3.13.15"
 
 # local dependencies to /usr/local
 COPY --from=gdal /usr/local /usr/local
-COPY --from=library ${STAGING_DIR}/usr/local /usr/local
+COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
+COPY --from=pdal ${STAGING_DIR}/usr/local /usr/local
 
-# build wheels
-RUN mkdir -p "${WHEEL_DIR}"; \
+# python selection & venv
+RUN python_major=${PYTHON_VERSION%%.*}; \
+    python_minor=${PYTHON_VERSION#*.}; \
+    python_minor=${python_minor%%.*}; \
+    python_dir=("/opt/python/cp${python_major}${python_minor}-"cp*[0-9m]); \
     #
-    # download pdal-python
-    TAR_FILE="${PDAL_PYTHON_VERSION}.tar.gz"; \
+    # python venv with build dependencies
+    "${python_dir}/bin/python3" -m venv /venv; \
+    source /venv/bin/activate; \
+    pip install \
+        ninja \
+        numpy==${NUMPY_VERSION} \
+        pybind11[global] \
+        scikit-build \
+        scikit-build-core \
+        ;
+
+# download pdal-python
+RUN TAR_FILE="${PDAL_PYTHON_VERSION}.tar.gz"; \
     curl -fsSLO "https://github.com/PDAL/python/archive/refs/tags/${TAR_FILE}"; \
     tar -xf "${TAR_FILE}" --strip-components=1; \
     #
     # workaround - wheel succeeds for Development.Module
     # https://gitlab.kitware.com/cmake/cmake/-/issues/20425
     # https://github.com/google/or-tools/issues/2774
-    sed -i '/^[ ]*find_package/s/Development /Development.Module /g' ./CMakeLists.txt; \
-    #
-    # python flavor
-    python_major=${PYTHON_VERSION%%.*}; \
-    python_minor=${PYTHON_VERSION#*.}; \
-    python_minor=${python_minor%%.*}; \
-    python_dir=("/opt/python/cp${python_major}${python_minor}-"cp*[0-9m]); \
-    #
-    # install python dependencies
-    "${python_dir}/bin/pip" install \
-        ninja \
-        numpy==${NUMPY_VERSION} \
-        pybind11[global] \
-        scikit-build \
-        scikit-build-core \
-        ; \
-    #
-    # build wheel
-    # Note $python_dir/bin is added to the path to allow cmake (used during
-    # the build process) to identify the correct python version
-    PATH="${python_dir}/bin:$PATH"; \
-    "${python_dir}/bin/pip" wheel . \
-        --no-deps --no-build-isolation -w "${WHEEL_DIR}"; \
-    #
-    # cleanup
-    rm -rf /tmp/*; \
-    ls -la "${WHEEL_DIR}";
+    sed -i '/^[ ]*find_package/s/Development /Development.Module /g' ./CMakeLists.txt;
+
+# pip wheel
+RUN source /venv/bin/activate; \
+    pip wheel . -w /wheelhouse \
+        --no-binary :all: --no-deps --no-build-isolation;
 
 
 # -----------------------------------------------------------------------------
@@ -252,9 +240,13 @@ FROM base
 # clear /usr/local
 RUN rm -rf /usr/local/*
 
-# migrate staging directory to /usr/local
-COPY --from=library ${STAGING_DIR}/usr/local /usr/local
-COPY --from=wheel ${STAGING_DIR}/usr/local /usr/local
+# wheels
+ENV WHEEL_DIR="/usr/local/share/just/wheels"
+COPY --from=wheel /wheelhouse "${WHEEL_DIR}"
+
+# local dependencies
+COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
+COPY --from=pdal ${STAGING_DIR}/usr/local /usr/local
 
 # Patch file for downstream image
 ENV PDAL_PATCH_FILE=/usr/local/share/just/container_build_patch/30_pdal

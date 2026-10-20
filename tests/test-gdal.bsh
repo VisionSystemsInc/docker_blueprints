@@ -6,8 +6,23 @@ fi
 
 source "${VSI_COMMON_DIR}/tests/testlib.bsh"
 source "${VSI_COMMON_DIR}/tests/test_utils.bsh"
+source "${VSI_COMMON_DIR}/linux/uwecho.bsh"
 
 : ${DOCKER=docker}
+
+function run_gdal()
+{
+  local opts=(
+    --rm
+    -e PROJ_NETWORK=ON
+    -e PROJ_USER_WRITABLE_DIRECTORY="/tmp/proj"
+    ${TESTDIR:+ -v "${TESTDIR}:/test"}
+    "vsiri/blueprint_test:test_gdal"
+  )
+  local result="$(${DOCKER} run "${opts[@]}" bash -c "source /venv/bin/activate; ${@}")"
+  echo "${result}"
+}
+
 
 if ! command -v "${DOCKER}" &> /dev/null; then
   skip_next_test
@@ -16,34 +31,19 @@ begin_test "GDAL"
 (
   setup_test
 
-  DOCKER_IMAGE="vsiri/blueprint_test:test_gdal"
-
-  # PROJ version
-  RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'proj 2>&1')"
-  assert_sub_str "${RESULT}" "Rel. 9.4.1, June 1st, 2024"
-
-  # pyproj version
-  RESULT="$(docker run --rm ${DOCKER_IMAGE} python -c 'import pyproj; print(pyproj.__version__)')"
-  assert_str_eq "${RESULT}" "3.7.0"
-
   # command line GDAL version
-  RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'gdalinfo --version')"
-  assert_str_eq "${RESULT}" "GDAL 3.10.3, released 2025/04/01"
+  RESULT="$(run_gdal "gdalinfo --version")"
+  assert_sub_str "${RESULT}" "3.13.3"
 
   # python GDAL version
-  RESULT="$(docker run --rm ${DOCKER_IMAGE} python -c 'from osgeo import gdal; print(gdal.__version__)')"
-  assert_str_eq "${RESULT}" "3.10.3"
+  RESULT="$(run_gdal "python -c 'from osgeo import gdal; print(gdal.__version__)'")"
+  assert_str_eq "${RESULT}" "3.13.3"
 
   # test python import (for example, gdal_array may fail to import if numpy is not installed)
-  docker run --rm ${DOCKER_IMAGE} python -c 'from osgeo import gdal, ogr, osr, gdal_array, gdalconst'
-
-  # test for expected `ldd libproj.so` results
-  RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'ldd /usr/local/lib/libproj.so | grep /usr/local')"
-  assert_sub_str "${RESULT}" "libsqlite3.so"
-  assert_sub_str "${RESULT}" "libtiff.so"
+  run_gdal "python -c 'from osgeo import gdal, ogr, osr, gdal_array, gdalconst'"
 
   # test for expected `ldd libgdal.so` results
-  RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'ldd /usr/local/lib64/libgdal.so | grep /usr/local')"
+  RESULT="$(run_gdal "ldd /usr/local/lib64/libgdal.so | grep /usr/local")"
   assert_sub_str "${RESULT}" "libgeos.so"
   assert_sub_str "${RESULT}" "libgeos_c.so"
   assert_sub_str "${RESULT}" "libgeotiff.so"
@@ -51,6 +51,110 @@ begin_test "GDAL"
   assert_sub_str "${RESULT}" "libproj.so"
   assert_sub_str "${RESULT}" "libsqlite3.so"
   assert_sub_str "${RESULT}" "libtiff.so"
+
+)
+end_test
+
+
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "PROJ"
+(
+  setup_test
+
+  DOCKER_IMAGE="vsiri/blueprint_test:test_gdal"
+
+  # PROJ version
+  RESULT="$(run_gdal "proj 2>&1")"
+  assert_sub_str "${RESULT}" "9.8.1"
+
+  # pyproj version
+  RESULT="$(run_gdal "python -c 'import pyproj; print(pyproj.__version__)'")"
+  assert_str_eq "${RESULT}" "3.7.2"
+
+  # test for expected `ldd libproj.so` results
+  RESULT="$(run_gdal "ldd /usr/local/lib/libproj.so | grep /usr/local")"
+  assert_sub_str "${RESULT}" "libsqlite3.so"
+  assert_sub_str "${RESULT}" "libtiff.so"
+
+)
+end_test
+
+
+# test WGS84 to EGM96 vertical datum transform using GDAL
+# this requires PROJ_NETWORK=ON to download EGM96 grid files
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "GDAL vertical datum"
+(
+  setup_test
+
+  uwecho 'import numpy as np
+          from osgeo import osr
+
+          def epsg_to_srs(epsg):
+              srs = osr.SpatialReference()
+              srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+              srs.ImportFromEPSG(epsg)
+              return srs
+
+          src_srs = epsg_to_srs(4979)
+          src_pt = [-84.045948, 39.827820, 215.134]
+
+          dst_srs = epsg_to_srs(9707)
+          dst_pt = [-84.045948, 39.827820, 249.0]
+
+          transform = osr.CoordinateTransformation(src_srs, dst_srs)
+          result = transform.TransformPoint(*src_pt)
+
+          np.testing.assert_allclose(result[0:2], dst_pt[0:2], rtol=0, atol=1e-7)
+          np.testing.assert_allclose(result[-1], dst_pt[-1], rtol=0, atol=0.10)
+
+          print("success")
+          ' > "${TESTDIR}/script.py"
+
+  RESULT="$(run_gdal "python /test/script.py")"
+  assert_str_eq "${RESULT}" "success"
+
+)
+end_test
+
+
+# test WGS84 to EGM96 vertical datum transform using pyproj
+# this requires PROJ_NETWORK=ON to download EGM96 grid files
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "PROJ vertical datum"
+(
+  setup_test
+
+  uwecho 'import numpy as np
+          import pyproj
+
+          src_epsg = "EPSG:4979"
+          src_pt = [-84.045948, 39.827820, 215.134]
+
+          dst_epsg = "EPSG:9707"
+          dst_pt = [-84.045948, 39.827820, 249.0]
+
+          tg = pyproj.transformer.TransformerGroup(src_epsg, dst_epsg, always_xy=True, allow_ballpark=False)
+          if not tg.best_available:
+              raise RuntimeError("pyproj missing best available transform")
+
+          transformer = tg.transformers[0]
+          result = transformer.transform(*src_pt)
+
+          np.testing.assert_allclose(result[0:2], dst_pt[0:2], rtol=0, atol=1e-7)
+          np.testing.assert_allclose(result[-1], dst_pt[-1], rtol=0, atol=0.10)
+
+          print("success")
+          ' > "${TESTDIR}/script.py"
+
+  RESULT="$(run_gdal "python /test/script.py")"
+  assert_str_eq "${RESULT}" "success"
 
 )
 end_test
