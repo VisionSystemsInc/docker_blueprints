@@ -93,6 +93,7 @@ begin_test "GDAL vertical datum"
 
   uwecho 'import numpy as np
           from osgeo import osr
+          osr.UseExceptions()
 
           def epsg_to_srs(epsg):
               srs = osr.SpatialReference()
@@ -115,9 +116,10 @@ begin_test "GDAL vertical datum"
           print("success")
           ' > "${TESTDIR}/script.py"
 
+  ls -lah "${TESTDIR}" >&2
+
   RESULT="$(run_gdal "python /test/script.py")"
   assert_str_eq "${RESULT}" "success"
-
 )
 end_test
 
