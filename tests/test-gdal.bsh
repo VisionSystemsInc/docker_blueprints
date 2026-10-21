@@ -16,10 +16,12 @@ function run_gdal()
     --rm
     -e PROJ_NETWORK=ON
     -e PROJ_USER_WRITABLE_DIRECTORY="/tmp/proj"
-    ${TESTDIR:+ -v "${TESTDIR}:/test"}
     "vsiri/blueprint_test:test_gdal"
   )
-  local result="$(${DOCKER} run "${opts[@]}" bash -c "source /venv/bin/activate; ${@}")"
+  local result="$(${DOCKER} run "${opts[@]}" bash -c "
+    source /venv/bin/activate
+    ${@}
+  ")"
   echo "${result}"
 }
 
@@ -32,18 +34,18 @@ begin_test "GDAL"
   setup_test
 
   # command line GDAL version
-  RESULT="$(run_gdal "gdalinfo --version")"
+  RESULT="$(run_gdal 'gdalinfo --version')"
   assert_sub_str "${RESULT}" "3.13.3"
 
   # python GDAL version
-  RESULT="$(run_gdal "python -c 'from osgeo import gdal; print(gdal.__version__)'")"
+  RESULT="$(run_gdal 'python -c "from osgeo import gdal; print(gdal.__version__)"')"
   assert_str_eq "${RESULT}" "3.13.3"
 
   # test python import (for example, gdal_array may fail to import if numpy is not installed)
-  run_gdal "python -c 'from osgeo import gdal, ogr, osr, gdal_array, gdalconst'"
+  run_gdal 'python -c "from osgeo import gdal, ogr, osr, gdal_array, gdalconst"'
 
-  # test for expected `ldd libgdal.so` results
-  RESULT="$(run_gdal "ldd /usr/local/lib64/libgdal.so | grep /usr/local")"
+  # test for expected ldd results
+  RESULT="$(run_gdal 'find /venv -name "_gdal*.so" | head -n1 | xargs ldd | grep /usr/local')"
   assert_sub_str "${RESULT}" "libgeos.so"
   assert_sub_str "${RESULT}" "libgeos_c.so"
   assert_sub_str "${RESULT}" "libgeotiff.so"
@@ -73,8 +75,9 @@ begin_test "PROJ"
   RESULT="$(run_gdal "python -c 'import pyproj; print(pyproj.__version__)'")"
   assert_str_eq "${RESULT}" "3.7.2"
 
-  # test for expected `ldd libproj.so` results
-  RESULT="$(run_gdal "ldd /usr/local/lib/libproj.so | grep /usr/local")"
+  # test for expected ldd results
+  RESULT="$(run_gdal 'find /venv -wholename "*/pyproj/_version*.so" | head -n1 | xargs ldd | grep /usr/local')"
+  assert_sub_str "${RESULT}" "libproj.so"
   assert_sub_str "${RESULT}" "libsqlite3.so"
   assert_sub_str "${RESULT}" "libtiff.so"
 
@@ -91,35 +94,34 @@ begin_test "GDAL vertical datum"
 (
   setup_test
 
-  uwecho 'import numpy as np
-          from osgeo import osr
-          osr.UseExceptions()
+  RESULT="$(run_gdal 'python - << 'EOF'
+import numpy as np
+from osgeo import osr
+osr.UseExceptions()
 
-          def epsg_to_srs(epsg):
-              srs = osr.SpatialReference()
-              srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
-              srs.ImportFromEPSG(epsg)
-              return srs
+def epsg_to_srs(epsg):
+    srs = osr.SpatialReference()
+    srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+    srs.ImportFromEPSG(epsg)
+    return srs
 
-          src_srs = epsg_to_srs(4979)
-          src_pt = [-84.045948, 39.827820, 215.134]
+src_srs = epsg_to_srs(4979)
+src_pt = [-84.045948, 39.827820, 215.134]
 
-          dst_srs = epsg_to_srs(9707)
-          dst_pt = [-84.045948, 39.827820, 249.0]
+dst_srs = epsg_to_srs(9707)
+dst_pt = [-84.045948, 39.827820, 249.0]
 
-          transform = osr.CoordinateTransformation(src_srs, dst_srs)
-          result = transform.TransformPoint(*src_pt)
+transform = osr.CoordinateTransformation(src_srs, dst_srs)
+result = transform.TransformPoint(*src_pt)
 
-          np.testing.assert_allclose(result[0:2], dst_pt[0:2], rtol=0, atol=1e-7)
-          np.testing.assert_allclose(result[-1], dst_pt[-1], rtol=0, atol=0.10)
+np.testing.assert_allclose(result[0:2], dst_pt[0:2], rtol=0, atol=1e-7)
+np.testing.assert_allclose(result[-1], dst_pt[-1], rtol=0, atol=0.10)
 
-          print("success")
-          ' > "${TESTDIR}/script.py"
-
-  ls -lah "${TESTDIR}" >&2
-
-  RESULT="$(run_gdal "ls -lah /; ls -lah /test; python /test/script.py")"
+print("success")
+EOF
+')"
   assert_str_eq "${RESULT}" "success"
+
 )
 end_test
 
@@ -133,29 +135,28 @@ begin_test "PROJ vertical datum"
 (
   setup_test
 
-  uwecho 'import numpy as np
-          import pyproj
+  RESULT="$(run_gdal 'python - << 'EOF'
+import numpy as np
+import pyproj
 
-          src_epsg = "EPSG:4979"
-          src_pt = [-84.045948, 39.827820, 215.134]
+src_epsg = "EPSG:4979"
+src_pt = [-84.045948, 39.827820, 215.134]
 
-          dst_epsg = "EPSG:9707"
-          dst_pt = [-84.045948, 39.827820, 249.0]
+dst_epsg = "EPSG:9707"
+dst_pt = [-84.045948, 39.827820, 249.0]
 
-          tg = pyproj.transformer.TransformerGroup(src_epsg, dst_epsg, always_xy=True, allow_ballpark=False)
-          if not tg.best_available:
-              raise RuntimeError("pyproj missing best available transform")
+tg = pyproj.transformer.TransformerGroup(src_epsg, dst_epsg, always_xy=True, allow_ballpark=False)
+if not tg.best_available:
+    raise RuntimeError("pyproj missing best available transform")
 
-          transformer = tg.transformers[0]
-          result = transformer.transform(*src_pt)
+transformer = tg.transformers[0]
+result = transformer.transform(*src_pt)
 
-          np.testing.assert_allclose(result[0:2], dst_pt[0:2], rtol=0, atol=1e-7)
-          np.testing.assert_allclose(result[-1], dst_pt[-1], rtol=0, atol=0.10)
+np.testing.assert_allclose(result[0:2], dst_pt[0:2], rtol=0, atol=1e-7)
+np.testing.assert_allclose(result[-1], dst_pt[-1], rtol=0, atol=0.10)
 
-          print("success")
-          ' > "${TESTDIR}/script.py"
-
-  RESULT="$(run_gdal "python /test/script.py")"
+print("success")
+')"
   assert_str_eq "${RESULT}" "success"
 
 )
