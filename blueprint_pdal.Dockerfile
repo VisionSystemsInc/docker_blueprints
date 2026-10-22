@@ -140,6 +140,7 @@ RUN \
 # -----------------------------------------------------------------------------
 FROM base AS deps
 
+COPY --from=gdal ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=laszip ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=lazperf ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=nitro ${STAGING_DIR} ${STAGING_DIR}
@@ -155,7 +156,6 @@ ARG PDAL_VERSION="2.10.1"
 ENV PDAL_VERSION=${PDAL_VERSION}
 
 # local dependencies
-COPY --from=gdal /usr/local /usr/local
 COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
 
 # install
@@ -195,7 +195,6 @@ ARG PDAL_PYTHON_VERSION="3.5.5"
 ARG PYTHON_VERSION="3.13.15"
 
 # local dependencies to /usr/local
-COPY --from=gdal /usr/local /usr/local
 COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
 COPY --from=pdal ${STAGING_DIR}/usr/local /usr/local
 
@@ -212,43 +211,45 @@ RUN python_major=${PYTHON_VERSION%%.*}; \
         ninja \
         numpy==${NUMPY_VERSION} \
         pybind11[global] \
-        scikit-build \
         scikit-build-core \
         ;
 
 # download pdal-python
-RUN TAR_FILE="${PDAL_PYTHON_VERSION}.tar.gz"; \
+RUN mkdir -p /pdal-python; \
+    TAR_FILE="${PDAL_PYTHON_VERSION}.tar.gz"; \
     curl -fsSLO "https://github.com/PDAL/python/archive/refs/tags/${TAR_FILE}"; \
-    tar -xf "${TAR_FILE}" --strip-components=1; \
+    tar -xf "${TAR_FILE}" --strip-components=1 -C /pdal-python; \
     #
     # workaround - wheel succeeds for Development.Module
     # https://gitlab.kitware.com/cmake/cmake/-/issues/20425
     # https://github.com/google/or-tools/issues/2774
-    sed -i '/^[ ]*find_package/s/Development /Development.Module /g' ./CMakeLists.txt;
+    sed -i '/^[ ]*find_package/s/Development /Development.Module /g' /pdal-python/CMakeLists.txt;
+
+# include command line tools in wheel
+COPY --from=pdal ${STAGING_DIR}/usr/local/bin /pdal-python/bin
+RUN PYPROJECT_TOML="/pdal-python/pyproject.toml"; \
+    echo '[tool.scikit-build.wheel.force-include]' >> "${PYPROJECT_TOML}"; \
+    echo '"bin" = "${SKBUILD_SCRIPTS_DIR}"' >> "${PYPROJECT_TOML}";
 
 # pip wheel
 RUN source /venv/bin/activate; \
-    pip wheel . -w /wheelhouse \
+    pip wheel /pdal-python -w /wheelhouse-tmp \
         --no-binary :all: --no-deps --no-build-isolation;
+
+# auditwheel
+RUN mkdir -p /wheelhouse; \
+    export LD_LIBRARY_PATH="/usr/local/lib64"; \
+    auditwheel repair /wheelhouse-tmp/*.whl -w /wheelhouse --exclude libcurl.so.4;
 
 
 # -----------------------------------------------------------------------------
 # PDAL final
 # -----------------------------------------------------------------------------
-FROM base
-
-# clear /usr/local
-RUN rm -rf /usr/local/*
+FROM scratch
 
 # wheels
-ENV WHEEL_DIR="/usr/local/share/just/wheels"
-COPY --from=wheel /wheelhouse "${WHEEL_DIR}"
+COPY --from=wheel /wheelhouse /usr/local/share/just/wheels
 
-# local dependencies
-COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
-COPY --from=pdal ${STAGING_DIR}/usr/local /usr/local
-
-# Patch file for downstream image
-ENV PDAL_PATCH_FILE=/usr/local/share/just/container_build_patch/30_pdal
-ADD 30_pdal ${PDAL_PATCH_FILE}
-RUN chmod +x ${PDAL_PATCH_FILE}
+# PROJ_DATA and GDAL_DATA
+COPY --from=gdal /staging/usr/local/share/proj /opt/proj_data
+COPY --from=gdal /staging/usr/local/share/gdal /opt/gdal_data

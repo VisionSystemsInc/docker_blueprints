@@ -329,8 +329,13 @@ RUN mkdir build; cd build; \
 # -----------------------------------------------------------------------------
 from base as wheel
 
-# local dependencies
-COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
+# rsync for wheel updates
+RUN dnf install -y rsync; \
+    rm -rf /var/cache/dnf/*
+
+# update auditwheel & patchelf
+# (installed patchelf would corrupt gdalinfo)
+RUN pipx upgrade auditwheel patchelf
 
 # python selection & venv
 ARG PYTHON_VERSION="3.13.15"
@@ -342,7 +347,35 @@ RUN python_major=${PYTHON_VERSION%%.*}; \
     # python venv with build dependencies
     "${python_dir}/bin/python3" -m venv /venv; \
     source /venv/bin/activate; \
-    pip install pybind11[global] setuptools;
+    pip install pybind11[global] setuptools wheel;
+
+# function to rsync source directory to wheel
+# this lets us add command line utilities, proj-data, etc.
+COPY <<'EOF' "/opt/wheelrsync.bsh"
+#!/usr/bin/env bash
+function wheelrsync()
+{
+    # variables
+    local wheel_exe="/venv/bin/wheel"
+    local source_dir="${1}"
+    local wheel_file="${2}"
+    local temp_dir="$(mktemp -d)"
+
+    # unpack & append via rsync
+    "${wheel_exe}" unpack "${wheel_file}" -d "${temp_dir}"
+    mv "${temp_dir}"/* "${temp_dir}/unpacked"
+
+    # append via rsync
+    rsync -av --ignore-existing "${source_dir}/" "${temp_dir}/unpacked/"
+
+    # repack & replace source
+    "${wheel_exe}" pack "${temp_dir}/unpacked" -d "${temp_dir}"
+    mv "${temp_dir}"/*.whl "${wheel_file}"
+
+    # cleanup
+    rm -rf "${temp_dir}"
+}
+EOF
 
 
 # -----------------------------------------------------------------------------
@@ -364,8 +397,20 @@ RUN source /venv/bin/activate; \
 
 # pip wheel
 RUN source /venv/bin/activate; \
-    pip wheel "gdal==${GDAL_VERSION}" -w /wheelhouse \
+    pip wheel "gdal==${GDAL_VERSION}" -w /wheelhouse-tmp \
         --no-binary :all: --no-deps --no-build-isolation;
+
+# add to wheel: command line tools, plugins, GDAL_DATA
+COPY --from=gdal ${STAGING_DIR}/usr/local/bin /tmp/deps/gdal-${GDAL_VERSION}.data/scripts
+COPY --from=gdal ${STAGING_DIR}/usr/local/lib64/gdalplugins /tmp/deps/osgeo/gdal_dir/gdalplugins
+COPY --from=gdal ${STAGING_DIR}/usr/local/share/gdal /tmp/deps/osgeo/gdal_dir/gdaldata
+RUN source /opt/wheelrsync.bsh; \
+    wheelrsync /tmp/deps /wheelhouse-tmp/*.whl
+
+# auditwheel
+RUN mkdir -p /wheelhouse; \
+    export LD_LIBRARY_PATH="/usr/local/lib64"; \
+    auditwheel repair /wheelhouse-tmp/*.whl -w /wheelhouse --exclude libcurl.so.4;
 
 
 # -----------------------------------------------------------------------------
@@ -399,28 +444,33 @@ RUN \
 
 # pip wheel
 RUN source /venv/bin/activate; \
-    pip wheel "pyproj==${PYPROJ_VERSION}" -w /wheelhouse \
+    pip wheel "pyproj==${PYPROJ_VERSION}" -w /wheelhouse-tmp \
         --no-binary :all: --no-deps --no-build-isolation;
+
+# add to wheel: command line tools, PROJ_DATA
+COPY --from=proj ${STAGING_DIR}/usr/local/bin /tmp/deps/pyproj-${PYPROJ_VERSION}.data/scripts
+COPY --from=proj ${STAGING_DIR}/usr/local/share/proj /tmp/deps/pyproj/proj_dir/share/proj
+RUN source /opt/wheelrsync.bsh; \
+    wheelrsync /tmp/deps /wheelhouse-tmp/*.whl
+
+# auditwheel
+RUN mkdir -p /wheelhouse; \
+    auditwheel repair /wheelhouse-tmp/*.whl -w /wheelhouse --exclude libcurl.so.4;
 
 
 # -----------------------------------------------------------------------------
 # GDAL final
 # -----------------------------------------------------------------------------
-FROM base
-
-# clear /usr/local of all other packages
-RUN rm -rf /usr/local/*
+FROM scratch
 
 # wheels
-ENV WHEEL_DIR="/usr/local/share/just/wheels"
-COPY --from=gdal-wheel /wheelhouse "${WHEEL_DIR}"
-COPY --from=pyproj-wheel /wheelhouse "${WHEEL_DIR}"
+COPY --from=gdal-wheel /wheelhouse /usr/local/share/just/wheels
+COPY --from=pyproj-wheel /wheelhouse /usr/local/share/just/wheels
 
-# local dependencies
-COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
-COPY --from=gdal ${STAGING_DIR}/usr/local /usr/local
+# PROJ_DATA and GDAL_DATA
+COPY --from=proj /staging/usr/local/share/proj /opt/proj_data
+COPY --from=gdal /staging/usr/local/share/gdal /opt/gdal_data
 
-# Patch file for downstream image
-ENV GDAL_PATCH_FILE=/usr/local/share/just/container_build_patch/30_gdal
-COPY 30_gdal ${GDAL_PATCH_FILE}
-RUN chmod +x ${GDAL_PATCH_FILE}
+# staged dependencies for downstream docker build like PDAL
+COPY --from=deps /staging /staging
+COPY --from=gdal /staging /staging

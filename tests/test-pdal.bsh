@@ -42,20 +42,18 @@ begin_test "PDAL"
   RESULT="$(run_pdal 'python -c "import pdal; print(pdal.info.version)"')"
   assert_str_eq "${RESULT}" "2.10.1"
 
-  # command line GDAL version
-  RESULT="$(run_pdal 'gdalinfo --version')"
-  assert_sub_str "${RESULT}" "GDAL 3.13.3"
+  # test for expected ldd results
+  function ldd_pdal() {
+    local wholename="${1}"
+    local result="$(run_pdal 'find /venv -wholename '${wholename}' | head -n1 | xargs ldd')"
+    local libs=( libgdal libgeos libgeos_c libgeotiff libopenjp2 libpdalcpp libproj libtiff )
+    for lib in "${libs[@]}"; do
+      assert_sub_str "${result}" "pdal.libs/${lib}"
+    done
+  }
 
-  # test for expected LDD results
-  RESULT="$(run_pdal 'find /venv -name "libpdalpython*.so" | head -n1 | xargs ldd | grep /usr/local')"
-  assert_sub_str "${RESULT}" "libgdal.so"
-  assert_sub_str "${RESULT}" "libgeos.so"
-  assert_sub_str "${RESULT}" "libgeos_c.so"
-  assert_sub_str "${RESULT}" "libgeotiff.so"
-  assert_sub_str "${RESULT}" "libopenjp2.so"
-  assert_sub_str "${RESULT}" "libpdalcpp.so"
-  assert_sub_str "${RESULT}" "libproj.so"
-  assert_sub_str "${RESULT}" "libtiff.so"
+  ldd_pdal '*/libpdalpython*.so'
+  ldd_pdal '*/pdal.scripts/pdal'
 
 )
 end_test
