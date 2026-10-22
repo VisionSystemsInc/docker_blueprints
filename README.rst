@@ -23,19 +23,9 @@ Add blueprint services to your docker-compose.yml file, using project specific i
             context: "${VSI_COMMON_DIR}/docker/blueprints"
             dockerfile: blueprint_gdal.Dockerfile
             args:
-               GDAL_VERSION: "3.3.3"
+               GDAL_VERSION: "3.13.3"
          image: &gdal_image
             example/project:gdal
-
-      pdal:
-         build:
-            context: "${VSI_COMMON_DIR}/docker/blueprints"
-            dockerfile: blueprint_pdal.Dockerfile
-            args:
-               GDAL_IMAGE: *gdal_image
-               PDAL_VERSION: "2.3.0"
-         image: &pdal_image
-            example/project:pdal
 
       example:
          build:
@@ -43,7 +33,6 @@ Add blueprint services to your docker-compose.yml file, using project specific i
             dockerfile: example.Dockerfile
             args:
                GDAL_IMAGE: *gdal_image
-               PDAL_IMAGE: *pdal_image
          image: example/project:example
 
 
@@ -53,19 +42,16 @@ The Dockerfile is then formulated as follows
 
    # blueprints
    ARG GDAL_IMAGE
-   ARG PDAL_IMAGE
    FROM ${GDAL_IMAGE} AS gdal
-   FROM ${PDAL_IMAGE} AS pdal
 
    # base image
-   FROM python:3.8
+   FROM python:3.13
 
-   # copy from blueprints
+   # copy wheel from blueprints
    COPY --from=gdal /usr/local /usr/local
-   COPY --from=pdal /usr/local /usr/local
 
-   # Only needs to be run once for all blueprints/recipes
-   RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
+   # install wheels
+   RUN pip install /usr/local/share/just/wheels/*.whl
 
 
 Python Wheels
@@ -110,33 +96,34 @@ Compiles GDAL v3, including OPENJPEG 2.4, GEOS 3.11.0, libtiff 4.3, libgeotiff 1
 .. code-block:: Dockerfile
 
    # global arguments
-   ARG PYTHON_VERSION
+   ARG GDAL_IMAGE
+   FROM ${GDAL_IMAGE} AS gdal
 
-   # blueprint input(s)
-   FROM example/project:gdal AS gdal
+   FROM some_image
 
-   # base image
-   FROM python:$PYTHON_VERSION
-
-   # local args
-   ARG NUMPY_VERSION
-
-   # additional runtime dependencies
-   RUN apt-get update; \
-      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-         libgeos-c1v5; \
-      rm -r /var/lib/apt/lists/*
+   ...
 
    # add blueprint
    COPY --from=gdal /usr/local /usr/local
 
-   # Patch all blueprints/recipes
-   RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
-
-   # install numpy then GDAL python bindings
+   # install numpy & wheels
+   ARG NUMPY_VERSION
    RUN pip install numpy==${NUMPY_VERSION}; \
-       pip install /usr/local/share/just/wheels/GDAL*.whl
+       pip install /usr/local/share/just/wheels/*.whl
 
+   # Add system-wide PROJ_DATA & GDAL_DATA
+   COPY --from=gdal /opt/proj_data /opt/proj_data
+   COPY --from=gdal /opt/gdal_data /opt/gdal_data
+   ENV PROJ_DATA=/opt/proj_data \
+       GDAL_DATA=/opt/gdal_data
+
+   # identify GDAL plugins
+   ENV GDAL_DRIVER_PATH=/venv/lib/python3.13/site-packages/osgeo/gdal_dir/gdalplugins
+
+.. code-block:: example.py
+
+    from osgeo import gdal
+    import pyproj
 
 PDAL
 ----
@@ -155,34 +142,30 @@ Compiles PDAL v2. Requires GDAL blueprint.
 .. code-block:: Dockerfile
 
    # global arguments
-   ARG PYTHON_VERSION
+   ARG PDAL_IMAGE
+   FROM ${PDAL_IMAGE} AS pdal
 
-   # blueprint input(s)
-   FROM example/project:gdal AS gdal
-   FROM example/project:pdal AS pdal
+   FROM some_image
 
-   # base image
-   FROM python:$PYTHON_VERSION
+   ...
 
-   # local args
+   # add blueprint
+   COPY --from=pdal /usr/local /usr/local
+
+   # install numpy & pdal
    ARG NUMPY_VERSION
-
-   # additional runtime dependencies
-   RUN apt-get update; \
-      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-         libgeos-c1v5; \
-      rm -r /var/lib/apt/lists/*
-
-   # add blueprint(s)
-   COPY --from=gdal /usr/local /usr/local
-   COPY --from-pdal /usr/local /usr/local
-
-   # Patch all blueprints/recipes
-   RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
-
-   # install numpy then GDAL python bindings
    RUN pip install numpy==${NUMPY_VERSION}; \
-       pip install /usr/local/share/just/wheels/PDAL*.whl
+       pip install /usr/local/share/just/wheels/*.whl
+
+   # Add system-wide PROJ_DATA & GDAL_DATA
+   COPY --from=pdal /opt/proj_data /opt/proj_data
+   COPY --from=pdal /opt/gdal_data /opt/gdal_data
+   ENV PROJ_DATA=/opt/proj_data \
+       GDAL_DATA=/opt/gdal_data
+
+.. code-block:: example.py
+
+    import pdal
 
 SWIG bindings for S2Geometry
 ----------------------------

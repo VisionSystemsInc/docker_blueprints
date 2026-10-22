@@ -44,14 +44,17 @@ begin_test "GDAL"
   run_gdal 'python -c "from osgeo import gdal, ogr, osr, gdal_array, gdalconst"'
 
   # test for expected ldd results
-  RESULT="$(run_gdal 'find /venv -name "_gdal*.so" | head -n1 | xargs ldd | grep /usr/local')"
-  assert_sub_str "${RESULT}" "libgeos.so"
-  assert_sub_str "${RESULT}" "libgeos_c.so"
-  assert_sub_str "${RESULT}" "libgeotiff.so"
-  assert_sub_str "${RESULT}" "libopenjp2.so"
-  assert_sub_str "${RESULT}" "libproj.so"
-  assert_sub_str "${RESULT}" "libsqlite3.so"
-  assert_sub_str "${RESULT}" "libtiff.so"
+  function ldd_gdal() {
+    local wholename="${1}"
+    local result="$(run_gdal 'find /venv -wholename '${1}' | head -n1 | xargs ldd')"
+    local libs=( libgdal libgeos libgeos_c libgeotiff libgomp libjpeg libopenjp2 libproj libsqlite libtiff )
+    for lib in "${libs[@]}"; do
+      assert_sub_str "${result}" "gdal.libs/${lib}"
+    done
+  }
+
+  ldd_gdal '*/_gdal*.so'
+  ldd_gdal '*/gdal.scripts/gdal'
 
 )
 end_test
@@ -75,10 +78,17 @@ begin_test "PROJ"
   assert_str_eq "${RESULT}" "3.7.2"
 
   # test for expected ldd results
-  RESULT="$(run_gdal 'find /venv -wholename "*/pyproj/_version*.so" | head -n1 | xargs ldd | grep /usr/local')"
-  assert_sub_str "${RESULT}" "libproj.so"
-  assert_sub_str "${RESULT}" "libsqlite3.so"
-  assert_sub_str "${RESULT}" "libtiff.so"
+  function ldd_pyproj() {
+    local wholename="${1}"
+    local result="$(run_gdal 'find /venv -wholename '${wholename}' | head -n1 | xargs ldd')"
+    local libs=( libjpeg libproj libsqlite3 libtiff )
+    for lib in "${libs[@]}"; do
+      assert_sub_str "${result}" "pyproj.libs/${lib}"
+    done
+  }
+
+  ldd_pyproj '*/pyproj/_version*.so'
+  ldd_pyproj '*/pyproj.scripts/proj'
 
 )
 end_test

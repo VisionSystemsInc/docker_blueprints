@@ -12,17 +12,20 @@ SHELL ["/usr/bin/env", "bash", "-euxvc"]
 # local args
 ARG NUMPY_VERSION
 
-# copy from blueprints
+# copy wheels
 COPY --from=gdal /usr/local /usr/local
-
-# access to lib64 packages
-ENV LD_LIBRARY_PATH="/usr/local/lib64"
-
-# Only needs to be run once for all blueprints/recipes
-RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
 
 # install numpy then python bindings
 RUN "/usr/local/bin/python" -m venv /venv; \
     source /venv/bin/activate; \
     pip install numpy==${NUMPY_VERSION}; \
     pip install /usr/local/share/just/wheels/*.whl
+
+# add system-wide PROJ_DATA & GDAL_DATA
+COPY --from=gdal /opt/proj_data /opt/proj_data
+COPY --from=gdal /opt/gdal_data /opt/gdal_data
+ENV PROJ_DATA=/opt/proj_data \
+    GDAL_DATA=/opt/gdal_data
+
+# point GDAL to plugins
+ENV GDAL_DRIVER_PATH=/venv/lib/python3.13/site-packages/osgeo/gdal_dir/gdalplugins
