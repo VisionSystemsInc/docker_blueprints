@@ -9,6 +9,22 @@ source "${VSI_COMMON_DIR}/tests/test_utils.bsh"
 
 : ${DOCKER=docker}
 
+function run_pdal()
+{
+  local opts=(
+    --rm
+    -e PROJ_NETWORK=ON
+    -e PROJ_USER_WRITABLE_DIRECTORY="/tmp/proj"
+    "vsiri/blueprint_test:test_pdal"
+  )
+  local result="$(${DOCKER} run "${opts[@]}" bash -c "
+    source /venv/bin/activate
+    ${@}
+  ")"
+  echo "${result}"
+}
+
+
 if ! command -v "${DOCKER}" &> /dev/null; then
   skip_next_test
 fi
@@ -19,28 +35,72 @@ begin_test "PDAL"
   DOCKER_IMAGE="vsiri/blueprint_test:test_pdal"
 
   # command line PDAL version
-  RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'pdal --version' | sed -n 2p)"
-  assert_str_eq "${RESULT}" "pdal 2.8.3 (git-version: Release)"
+  RESULT="$(run_pdal 'pdal --version')"
+  assert_sub_str "${RESULT}" "pdal 2.10.1"
 
   # python PDAL version
-  RESULT="$(docker run --rm ${DOCKER_IMAGE} python -c 'import pdal; print(pdal.info.version)')"
-  assert_str_eq "${RESULT}" "2.8.3"
+  RESULT="$(run_pdal 'python -c "import pdal; print(pdal.info.version)"')"
+  assert_str_eq "${RESULT}" "2.10.1"
 
   # command line GDAL version
-  # Note this version is purposefully different from the default blueprint_gdal
-  # GDAL_VERSION to ensure the chained blueprints honor all version ARGs
-  RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'gdalinfo --version')"
-  assert_str_eq "${RESULT}" "GDAL 3.10.3, released 2025/04/01"
+  RESULT="$(run_pdal 'gdalinfo --version')"
+  assert_sub_str "${RESULT}" "GDAL 3.13.3"
 
   # test for expected LDD results
-  RESULT="$(docker run --rm ${DOCKER_IMAGE} bash -c 'ldd /usr/local/lib64/libpdalcpp.so | grep /usr/local')"
+  RESULT="$(run_pdal 'find /venv -name "libpdalpython*.so" | head -n1 | xargs ldd | grep /usr/local')"
   assert_sub_str "${RESULT}" "libgdal.so"
   assert_sub_str "${RESULT}" "libgeos.so"
   assert_sub_str "${RESULT}" "libgeos_c.so"
   assert_sub_str "${RESULT}" "libgeotiff.so"
   assert_sub_str "${RESULT}" "libopenjp2.so"
+  assert_sub_str "${RESULT}" "libpdalcpp.so"
   assert_sub_str "${RESULT}" "libproj.so"
   assert_sub_str "${RESULT}" "libtiff.so"
+
+)
+end_test
+
+
+# test WGS84 to EGM96 vertical datum transform using PDAL
+# this requires PROJ_NETWORK=ON to download EGM96 grid files
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "PDAL vertical datum"
+(
+  setup_test
+
+  RESULT="$(run_pdal 'python - << 'EOF'
+import numpy as np
+from numpy.lib.recfunctions import structured_to_unstructured
+import pdal
+
+src_epsg = "EPSG:4979"
+src_pt = [-84.045948, 39.827820, 215.134]
+
+dst_epsg = "EPSG:9707"
+dst_pt = [-84.045948, 39.827820, 249.0]
+
+lon = [src_pt[0], src_pt[0] + 0.01]
+lat = [src_pt[1], src_pt[1] + 0.01]
+alt = [src_pt[2], src_pt[2] + 10]
+src_bounds = f"({lon}, {lat}, {alt})"
+
+pipeline = pdal.Pipeline()
+pipeline |= pdal.Reader.faux(filename="", mode="constant", count=10, bounds=src_bounds, override_srs=src_epsg)
+pipeline |= pdal.Filter.reprojection(out_srs=dst_epsg)
+pipeline.execute()
+
+array = pipeline.arrays[0]
+result = structured_to_unstructured(array[["X", "Y", "Z"]])[0, :]
+
+np.testing.assert_allclose(result[0:2], dst_pt[0:2], rtol=0, atol=1e-7)
+np.testing.assert_allclose(result[-1], dst_pt[-1], rtol=0, atol=0.10)
+
+print("success")
+EOF
+')"
+  assert_str_eq "${RESULT}" "success"
 
 )
 end_test

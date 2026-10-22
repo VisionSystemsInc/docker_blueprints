@@ -1,6 +1,6 @@
 # global args
-ARG GDAL_IMAGE
-ARG PYTHON_VERSION
+ARG GDAL_IMAGE="vsiri/blueprint_test:gdal"
+ARG PYTHON_VERSION="3.13.15"
 
 # blueprints
 FROM ${GDAL_IMAGE} AS gdal
@@ -22,5 +22,7 @@ ENV LD_LIBRARY_PATH="/usr/local/lib64"
 RUN shopt -s nullglob; for patch in /usr/local/share/just/container_build_patch/*; do "${patch}"; done
 
 # install numpy then python bindings
-RUN pip install numpy==${NUMPY_VERSION}; \
+RUN "/usr/local/bin/python" -m venv /venv; \
+    source /venv/bin/activate; \
+    pip install numpy==${NUMPY_VERSION}; \
     pip install /usr/local/share/just/wheels/*.whl
