@@ -6,7 +6,6 @@ fi
 
 source "${VSI_COMMON_DIR}/tests/testlib.bsh"
 source "${VSI_COMMON_DIR}/tests/test_utils.bsh"
-source "${VSI_COMMON_DIR}/linux/uwecho.bsh"
 
 : ${DOCKER=docker}
 
