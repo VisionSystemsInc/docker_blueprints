@@ -42,33 +42,8 @@ ENV STAGING_DIR="/staging"
 ENV REPORT_DIR="${STAGING_DIR}/usr/local/share/just/info"
 RUN mkdir -p "${STAGING_DIR}" "${REPORT_DIR}";
 
-# remove direct access to /opt/_internal/sqlite3
-RUN rm -f /usr/local/lib/pkgconfig/sqlite3.pc
-
 # working directory (for download, unpack, build, etc.)
 WORKDIR /tmp
-
-
-# -----------------------------------------------------------------------------
-# SQLITE3
-# -----------------------------------------------------------------------------
-# copy & adjust manylinux-built sqlite3
-#
-# The sqlite3 project decided to remove the SONAME from libsqlite3.so by
-# default, leaving SONAME details to packagers.
-# https://github.com/sqlite/sqlite/blob/version-3.50.4/autosetup/sqlite-config.tcl#L339-L346
-# Without an SONAME, dependent projects like libproj report an absolute file
-# path for libsqlite3.so and are no longer portable. We thus add back the
-# legacy SONAME and remove RUNPATH from the .so file via ``patchelf``.
-FROM base AS sqlite3
-
-RUN cp -r /opt/_internal/sqlite3/* "${STAGING_DIR}/usr/local"; \
-    # adjust pkg-config
-    PC="${STAGING_DIR}/usr/local/lib/pkgconfig/sqlite3.pc"; \
-    sed -i 's|^prefix=.*|prefix=/usr/local|g' "${PC}"; \
-    # adjust so file: remove RUNPATH and add legacy SONAME
-    SO="${STAGING_DIR}/usr/local/lib/libsqlite3.so"; \
-    patchelf --set-soname 'libsqlite3.so.0' --remove-rpath "${SO}";
 
 
 # -----------------------------------------------------------------------------
@@ -214,7 +189,6 @@ FROM base AS proj
 ARG PROJ_VERSION="9.8.1"
 
 # local dependencies
-COPY --from=sqlite3 ${STAGING_DIR}/usr/local /usr/local
 COPY --from=tiff ${STAGING_DIR}/usr/local /usr/local
 
 # install
@@ -226,6 +200,7 @@ RUN \
     #
     # configure, build, & install
     mkdir build; cd build; \
+    export CMAKE_PREFIX_PATH="/opt/_internal/sqlite3"; \
     cmake .. \
         -DCMAKE_INSTALL_LIBDIR="lib" \
         -DBUILD_SHARED_LIBS=ON \
@@ -280,7 +255,6 @@ RUN \
 # -----------------------------------------------------------------------------
 FROM base AS deps
 
-COPY --from=sqlite3 ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=openjpeg ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=ecw ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=geos ${STAGING_DIR} ${STAGING_DIR}
@@ -309,8 +283,8 @@ RUN TAR_FILE="gdal-${GDAL_VERSION}.tar.gz"; \
 # configure, build, & install
 # https://raw.githubusercontent.com/OSGeo/gdal/master/gdal/configure
 RUN mkdir build; cd build; \
+    export CMAKE_PREFIX_PATH="/usr/local;/usr/local/ecw"; \
     cmake .. \
-        -D CMAKE_PREFIX_PATH="/usr/local;/usr/local/ecw" \
         -D CMAKE_BUILD_TYPE=Release \
         -D BUILD_PYTHON_BINDINGS=OFF \
         -D GDAL_USE_PCRE=OFF \
@@ -466,6 +440,10 @@ FROM scratch
 # wheels
 COPY --from=gdal-wheel /wheelhouse /usr/local/share/just/wheels
 COPY --from=pyproj-wheel /wheelhouse /usr/local/share/just/wheels
+
+# configure/version reports
+COPY --from=deps /staging/usr/local/share/just/info /usr/local/share/just/info
+COPY --from=gdal /staging/usr/local/share/just/info /usr/local/share/just/info
 
 # PROJ_DATA and GDAL_DATA
 COPY --from=proj /staging/usr/local/share/proj /opt/proj_data

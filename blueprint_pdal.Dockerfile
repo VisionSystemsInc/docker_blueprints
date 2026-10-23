@@ -46,9 +46,6 @@ ENV STAGING_DIR="/staging"
 ENV REPORT_DIR="${STAGING_DIR}/usr/local/share/just/info"
 RUN mkdir -p "${STAGING_DIR}" "${REPORT_DIR}";
 
-# remove direct access to /opt/_internal/sqlite3
-RUN rm -f /usr/local/lib/pkgconfig/sqlite3.pc
-
 # working directory (for download, unpack, build, etc.)
 WORKDIR /tmp
 
@@ -140,7 +137,6 @@ RUN \
 # -----------------------------------------------------------------------------
 FROM base AS deps
 
-COPY --from=gdal ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=laszip ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=lazperf ${STAGING_DIR} ${STAGING_DIR}
 COPY --from=nitro ${STAGING_DIR} ${STAGING_DIR}
@@ -157,6 +153,7 @@ ENV PDAL_VERSION=${PDAL_VERSION}
 
 # local dependencies
 COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
+COPY --from=gdal ${STAGING_DIR}/usr/local /usr/local
 
 # install
 RUN \
@@ -194,10 +191,6 @@ ARG NUMPY_VERSION="2.3.5"
 ARG PDAL_PYTHON_VERSION="3.5.5"
 ARG PYTHON_VERSION="3.13.15"
 
-# local dependencies to /usr/local
-COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
-COPY --from=pdal ${STAGING_DIR}/usr/local /usr/local
-
 # python selection & venv
 RUN python_major=${PYTHON_VERSION%%.*}; \
     python_minor=${PYTHON_VERSION#*.}; \
@@ -213,6 +206,11 @@ RUN python_major=${PYTHON_VERSION%%.*}; \
         pybind11[global] \
         scikit-build-core \
         ;
+
+# local dependencies to /usr/local
+COPY --from=deps ${STAGING_DIR}/usr/local /usr/local
+COPY --from=gdal ${STAGING_DIR}/usr/local /usr/local
+COPY --from=pdal ${STAGING_DIR}/usr/local /usr/local
 
 # download pdal-python
 RUN mkdir -p /pdal-python; \
@@ -249,6 +247,10 @@ FROM scratch
 
 # wheels
 COPY --from=wheel /wheelhouse /usr/local/share/just/wheels
+
+# configure/version reports
+COPY --from=deps /staging/usr/local/share/just/info /usr/local/share/just/info
+COPY --from=pdal /staging/usr/local/share/just/info /usr/local/share/just/info
 
 # PROJ_DATA and GDAL_DATA
 COPY --from=gdal /staging/usr/local/share/proj /opt/proj_data
