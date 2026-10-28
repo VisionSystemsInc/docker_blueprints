@@ -375,6 +375,7 @@ RUN source /venv/bin/activate; \
         --no-binary :all: --no-deps --no-build-isolation;
 
 # add to wheel: command line tools, plugins, GDAL_DATA
+COPY --from=geotiff ${STAGING_DIR}/usr/local/bin /tmp/deps/gdal-${GDAL_VERSION}.data/scripts
 COPY --from=gdal ${STAGING_DIR}/usr/local/bin /tmp/deps/gdal-${GDAL_VERSION}.data/scripts
 COPY --from=gdal ${STAGING_DIR}/usr/local/lib64/gdalplugins /tmp/deps/osgeo/gdal_dir/gdalplugins
 COPY --from=gdal ${STAGING_DIR}/usr/local/share/gdal /tmp/deps/osgeo/gdal_dir/gdaldata

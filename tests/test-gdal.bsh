@@ -36,6 +36,10 @@ begin_test "GDAL"
   RESULT="$(run_gdal 'gdalinfo --version')"
   assert_sub_str "${RESULT}" "3.13.3"
 
+  # command line listgeo (geotiff utility)
+  RESULT="$(run_gdal 'listgeo --help')"
+  assert_sub_str "${RESULT}" "Usage: listgeo"
+
   # python GDAL version
   RESULT="$(run_gdal 'python -c "from osgeo import gdal; print(gdal.__version__)"')"
   assert_str_eq "${RESULT}" "3.13.3"
