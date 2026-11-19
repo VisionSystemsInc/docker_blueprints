@@ -8,7 +8,6 @@ RUN dnf install -y \
         gmp-devel \
         mesa-libGLU-devel \
         mpfr-devel \
-        qt5-qtbase-devel \
         xerces-c-devel \
         ; \
     rm -rf /var/cache/dnf/*
@@ -29,6 +28,47 @@ RUN URL="https://github.com/uxlfoundation/oneTBB/releases/download/v${TBB_VERSIO
     curl -fsSL "${URL}" -o /tmp/tbb.tgz; \
     mkdir -p /tbb; \
     tar -xvf /tmp/tbb.tgz --strip-components=1 -C /tbb; \
+    rm -rf /tmp/*;
+
+# Qt5 without ssl
+ARG QT_VERSION="5.15.19"
+ARG QT_BUILD_CONCURRENCY=
+RUN \
+    SOURCE_DIR="/tmp/qt/source"; \
+    BUILD_DIR="/tmp/qt/build"; \
+    INSTALL_DIR="/opt/qt5"; \
+    mkdir -p "${SOURCE_DIR}" "${BUILD_DIR}" "${INSTALL_DIR}"; \
+    #
+    # download
+    URL="https://download.qt.io/archive/qt/${QT_VERSION%.*}/${QT_VERSION}/submodules/qtbase-everywhere-opensource-src-${QT_VERSION}.tar.xz"; \
+    curl -fsSL "${URL}" -o /tmp/qtbase.tar.xz; \
+    tar -xf /tmp/qtbase.tar.xz --strip-components=1 -C "${SOURCE_DIR}"; \
+    #
+    # configure
+    cd "${BUILD_DIR}"; \
+    "${SOURCE_DIR}/configure" \
+        -prefix "${INSTALL_DIR}" \
+        -opensource \
+        -confirm-license \
+        -release \
+        # disable examples & tests
+        -nomake examples \
+        -nomake tests \
+        # disable unused modules
+        -no-feature-concurrent \
+        -no-feature-dbus \
+        -no-feature-sql \
+        -no-feature-testlib \
+        # no SSL (not needed, causes FIPS issues)
+        -no-openssl \
+        -no-ssl \
+        ; \
+    #
+    # build & install
+    make -j${QT_BUILD_CONCURRENCY:-$(nproc)}; \
+    make install; \
+    #
+    # cleanup
     rm -rf /tmp/*;
 
 # clone pymeshlab
@@ -52,10 +92,13 @@ RUN \
     rm -rf /tmp/*;
 
 # additional source code modifications
-RUN \
+RUN cd /pymeshlab/source; \
     # CMakeLists.txt: limit python components, use system pybind11
     sed -i "s|add_subdirectory(pybind11)|find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)\nfind_package(pybind11 REQUIRED)|g" \
-        "/pymeshlab/source/src/pymeshlab/CMakeLists.txt";
+        "src/pymeshlab/CMakeLists.txt"; \
+    # missing QDebug include statement
+    sed -i '0,/#include.*/s//&\n#include <QDebug>/' \
+        "src/meshlab/src/meshlabplugins/filter_sketchfab/filter_sketchfab.cpp";
 
 # python selection & venv
 ARG PYTHON_VERSION="3.13.12"
