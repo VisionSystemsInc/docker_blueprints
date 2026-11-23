@@ -2,25 +2,17 @@
 
 ARG CUDA_VERSION="12.9.2"
 ARG TINYCUDANN_IMAGE="vsiri/blueprint_test:tinycudann"
+ARG BASE_IMAGE="nvidia/cuda:${CUDA_VERSION}-base-ubi9"
 
-ARG BASE_IMAGE="nvidia/cuda:${CUDA_VERSION}-runtime-ubi8"
-
+# blueprints
 FROM ${TINYCUDANN_IMAGE} AS tinycudann
 
-FROM ${BASE_IMAGE} AS builder
-
-# update shell
+# base image
+FROM ${BASE_IMAGE}
 SHELL ["/usr/bin/env", "/bin/bash", "-euxvc"]
 
 # cache directory (redirect pip cache to `/cache/pip`)
 ENV XDG_CACHE_HOME="/cache"
-
-# Dependencies
-RUN dnf install -y \
-      ca-certificates \
-      curl \
-      ; \
-    rm -rf /var/cache/yum
 
 # versioned python via miniforge
 ARG PYTHON_VERSION="3.13.12"
