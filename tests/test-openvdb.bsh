@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+if [ -z "${VSI_COMMON_DIR+set}" ]; then
+  VSI_COMMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.."; pwd)"
+fi
+
+source "${VSI_COMMON_DIR}/tests/testlib.bsh"
+source "${VSI_COMMON_DIR}/tests/test_utils.bsh"
+
+: ${DOCKER=docker}
+
+if ! command -v "${DOCKER}" &> /dev/null; then
+  skip_next_test
+fi
+begin_test "openvdb"
+(
+  setup_test
+
+  DOCKER_IMAGE="vsiri/blueprint_test:test_openvdb"
+
+  # create an openvdb level set sphere, convert to nanovdb, and compare
+  # active voxel counts
+  function test_openvdb()
+  {
+    local script='if True:
+      import openvdb
+      import nanovdb
+
+      grid = openvdb.createLevelSetSphere(radius=10.0, voxelSize=1.0, halfWidth=3.0)
+      print(grid.activeVoxelCount())
+
+      handle = nanovdb.tools.openToNanoVDB(grid)
+      print(handle.floatGrid().activeVoxelCount())
+
+      from importlib.metadata import version
+      print(version("openvdb"))
+    '
+    local opts=(
+        --rm
+        "${DOCKER_IMAGE}"
+        /venv/bin/python -c "${script}"
+    )
+    local result="$("${DOCKER}" run "${opts[@]}" 2>&1)"
+    echo "${result}"
+  }
+
+  RESULT="$(test_openvdb)"
+  EXPECTED="$(echo -e "7674\n7674\n14.0.0")"
+  assert_str_eq "${RESULT}" "${EXPECTED}"
+)
+end_test
