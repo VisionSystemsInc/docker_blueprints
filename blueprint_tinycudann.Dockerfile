@@ -86,8 +86,10 @@ RUN EXCLUDE=( \
         libtorch_cuda.so \
         libtorch_cpu.so \
         libtorch_python.so \
-        # cuda libraries
-        libcuda.so.1 \
+        # cuda/nvidia libraries
+        libcuda.so* \
+        libcudart.so* \
+        libnvrtc.so* \
     ); \
     auditwheel repair /wheelhouse-tmp/*.whl -w /wheelhouse \
         $(printf -- '--exclude %s ' "${EXCLUDE[@]}"); \
