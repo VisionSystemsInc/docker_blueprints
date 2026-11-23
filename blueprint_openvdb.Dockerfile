@@ -62,7 +62,14 @@ RUN git clone --depth 1 -b "${ZSTD_VERSION}" https://github.com/facebook/zstd.gi
 # https://github.com/AcademySoftwareFoundation/openvdb/tags
 ARG OPENVDB_VERSION="v14.0.0"
 RUN git clone https://github.com/AcademySoftwareFoundation/openvdb.git /openvdb/source; \
-    git -C /openvdb/source checkout "${OPENVDB_VERSION}";
+    git -C /openvdb/source checkout "${OPENVDB_VERSION}"; \
+    #
+    # manylinux python does not include libpython, so only request the
+    # Development.Module component (not Development.Embed) of FindPython
+    sed -i -E \
+        's|(find_package\(Python .* COMPONENTS) Development (Interpreter\))|\1 Development.Module \2|' \
+        /openvdb/source/CMakeLists.txt; \
+    grep -q 'COMPONENTS Development.Module Interpreter' /openvdb/source/CMakeLists.txt;
 
 # python venv & build dependencies
 ARG PYTHON_VERSION="3.13.12"
@@ -92,10 +99,10 @@ RUN \
 # packages, along with libopenvdb.so.
 #
 # set NANOVDB_USE_CUDA=ON to build the nanovdb CUDA functionality
-# (nanovdb.cuda). Use NANOVDB_CUDA_ARCHITECTURES to control the CUDA
+# (nanovdb.cuda). Use CMAKE_CUDA_ARCHITECTURES to control the CUDA
 # architectures.
 ARG NANOVDB_USE_CUDA="OFF"
-ARG NANOVDB_CUDA_ARCHITECTURES="75;86"
+ARG CMAKE_CUDA_ARCHITECTURES="75;86"
 ARG NINJA_BUILD_CONCURRENCY=
 RUN source /venv/bin/activate; \
     mkdir -p /wheelhouse-tmp; \
@@ -106,18 +113,22 @@ RUN source /venv/bin/activate; \
     # cmake options, layered on top of [tool.scikit-build.cmake.define]
     CMAKE_DEFINES=( \
         CMAKE_PREFIX_PATH="/usr/local" \
+        # openvdb's __init__.py & nanovdb's RPATH expect "lib" (not "lib64")
+        CMAKE_INSTALL_LIBDIR=lib \
         nanobind_DIR="$(python -m nanobind --cmake_dir)" \
         # no command line tools in the wheel
         OPENVDB_BUILD_BINARIES=OFF \
         NANOVDB_BUILD_TOOLS=OFF \
         USE_CCACHE=OFF \
+        # concurrent malloc only applies to executables (disabled above)
+        CONCURRENT_MALLOC=None \
         # nanovdb cuda support
         NANOVDB_USE_CUDA="${NANOVDB_USE_CUDA}" \
     ); \
     if [ "${NANOVDB_USE_CUDA}" == "ON" ]; then \
       CMAKE_DEFINES+=( \
         CMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc \
-        CMAKE_CUDA_ARCHITECTURES="${NANOVDB_CUDA_ARCHITECTURES}" \
+        CMAKE_CUDA_ARCHITECTURES="${CMAKE_CUDA_ARCHITECTURES}" \
       ); \
     fi; \
     #
