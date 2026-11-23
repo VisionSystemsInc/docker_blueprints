@@ -94,7 +94,7 @@ RUN \
 # (nanovdb.cuda). Use CMAKE_CUDA_ARCHITECTURES to control the CUDA
 # architectures.
 ARG NANOVDB_USE_CUDA="OFF"
-ARG CMAKE_CUDA_ARCHITECTURES="75;86"
+ARG CMAKE_CUDA_ARCHITECTURES="all"
 ARG NINJA_BUILD_CONCURRENCY=
 RUN source /venv/bin/activate; \
     mkdir -p /wheelhouse-tmp; \
