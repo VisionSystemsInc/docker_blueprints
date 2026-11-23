@@ -36,7 +36,7 @@ services:
     image: vsiri/blueprint:pdal
 
   # Example
-  s2:
+  s2geometry:
     build:
       context: .
       dockerfile: blueprint_s2geometry.Dockerfile
@@ -44,7 +44,7 @@ services:
       #   BASE_IMAGE="${BASE_IMAGE}"
       #   S2GEOMETRY_VERSION="${S2GEOMETRY_VERSION}"
       #   PYTHON_VERSION="${PYTHON_VERSION}"
-    image: vsiri/blueprint:s2
+    image: vsiri/blueprint:s2geometry
 
   # Example
   nglog:

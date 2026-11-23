@@ -18,7 +18,7 @@ x-references:
           # GDAL then PDAL
           - gdal pdal
           # multiple blueprints that are relatively quick to build
-          - ktx nglog s2
+          - ktx nglog s2geometry
 
   build_config: &build_config
     docker:

@@ -12,9 +12,9 @@ x-args:
     NGLOG_VERSION: "v0.8.0"
     LIBUNWIND_VERSION: "v1.8.2"
     PYTHON_VERSION: &nglog_python_version "3.9"
-  s2: &s2_args
+  s2geometry: &s2geometry_args
     S2GEOMETRY_VERSION: "v0.13.1"
-    PYTHON_VERSION: &s2_python_version "3.10.15"
+    PYTHON_VERSION: &s2geometry_python_version "3.10.15"
   tinycudann: &tinycudann_args
     CUDA_VERSION: &tinycudann_cuda_version "12.9.2"
     PYTHON_VERSION: &tinycudann_python_version "3.13.12"
@@ -71,13 +71,13 @@ services:
         <<: *pdal_args
     image: &pdal_image vsiri/blueprint_test:pdal
 
-  s2:
+  s2geometry:
     build:
       context: ..
       dockerfile: blueprint_s2geometry.Dockerfile
       args:
-        <<: *s2_args
-    image: &s2_image vsiri/blueprint_test:s2
+        <<: *s2geometry_args
+    image: &s2geometry_image vsiri/blueprint_test:s2geometry
 
   nglog:
     build:
@@ -164,14 +164,14 @@ services:
         NUMPY_VERSION: *gdal_numpy_version
     image: vsiri/blueprint_test:test_pdal
 
-  test_s2:
+  test_s2geometry:
     build:
       context: .
       dockerfile: test_s2geometry.Dockerfile
       args:
-        S2_IMAGE: *s2_image
-        PYTHON_VERSION: *s2_python_version
-    image: vsiri/blueprint_test:test_s2
+        S2GEOMETRY_IMAGE: *s2geometry_image
+        PYTHON_VERSION: *s2geometry_python_version
+    image: vsiri/blueprint_test:test_s2geometry
 
   test_nglog:
     build:
