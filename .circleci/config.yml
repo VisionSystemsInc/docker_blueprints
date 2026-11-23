@@ -334,6 +334,9 @@ jobs:
             source setup.env
             TESTLIB_DISCOVERY_DIR="${BLUEPRINT_DIR}/tests" just test << parameters.services >>
 
+  # confirm all checks passed
+  all-checks-passed:
+    type: no-op
 
 # -----
 # CircleCI workflows
@@ -345,3 +348,7 @@ workflows:
           <<: *matrix_services
       - build_tests:
           <<: *matrix_services
+      - all-checks-passed:
+          requires:
+            - build_blueprints
+            - build_tests
