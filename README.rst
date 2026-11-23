@@ -308,7 +308,7 @@ Python bindings for tiny-cuda-nn
             context: "${VSI_COMMON_DIR}/docker/blueprints"
             dockerfile: blueprint_tinycudann.Dockerfile
             args:
-               # CUDA_VERSION: "12.9.1"
+               # CUDA_VERSION: "12.9.2"
                # https://hub.docker.com/r/nvidia/cuda/tags
                # PYTHON_VERSION: "3.13.12"
                # https://www.python.org/doc/versions/
@@ -383,7 +383,7 @@ Python bindings for open3d
                # https://www.open3d.org/docs/release/compilation.html#:~:text=To%20build%20Open3D%20with%20CUDA%20support%2C%20configure%20with%3A
                # CMAKE_CUDA_ARCHITECTURES: 86-real
                # https://cmake.org/cmake/help/latest/prop_tgt/CUDA_ARCHITECTURES.html#prop_tgt:CUDA_ARCHITECTURES
-               # CUDA_VERSION: "12.9.1"
+               # CUDA_VERSION: "12.9.2"
                # https://hub.docker.com/r/nvidia/cuda/tags
                # OPEN3D_VERSION: "v2.0"
                # https://github.com/isl-org/Open3D/releases
@@ -505,7 +505,7 @@ MMCV
             context: "${VSI_COMMON_DIR}/docker/blueprints"
             dockerfile: blueprint_mmcv.Dockerfile
             args:
-               # CUDA_VERSION: "12.9.1"
+               # CUDA_VERSION: "12.9.2"
                # https://hub.docker.com/r/nvidia/cuda/tags
                # MMCV_VERSION: "v2.2.0"
                # https://github.com/open-mmlab/mmcv/tags
@@ -571,7 +571,7 @@ MTP with DCNv3
             context: "${VSI_COMMON_DIR}/docker/blueprints"
             dockerfile: blueprint_mtp.Dockerfile
             args:
-               # CUDA_VERSION: "12.9.1"
+               # CUDA_VERSION: "12.9.2"
                # https://hub.docker.com/r/nvidia/cuda/tags
                # MTP_VERSION: "73eb44bb8989158edbc29194f3ca347dc67b2d6b"
                # https://github.com/VisionSystemsInc/MTP
@@ -699,7 +699,7 @@ Segment Anything Model 2 (SAM2)
             context: "${VSI_COMMON_DIR}/docker/blueprints"
             dockerfile: blueprint_sam2.Dockerfile
             args:
-               # CUDA_VERSION: "12.9.1"
+               # CUDA_VERSION: "12.9.2"
                # https://hub.docker.com/r/nvidia/cuda/tags
                # PYTHON_VERSION: "3.13.15"
                # https://hub.docker.com/_/python/tags
