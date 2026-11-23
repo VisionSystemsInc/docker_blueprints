@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 
-ARG CUDA_VERSION="12.9.1"
+ARG CUDA_VERSION="12.9.2"
 ARG TINYCUDANN_IMAGE="vsiri/blueprint_test:tinycudann"
 
 ARG BASE_IMAGE="nvidia/cuda:${CUDA_VERSION}-runtime-ubi8"

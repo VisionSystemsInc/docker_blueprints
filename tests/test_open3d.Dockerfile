@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 
-ARG CUDA_VERSION="12.9.1"
+ARG CUDA_VERSION="12.9.2"
 ARG BASE_IMAGE="nvidia/cuda:${CUDA_VERSION}-runtime-ubi9"
 ARG OPEN3D_IMAGE="vsiri/blueprint_test:open3d"
 

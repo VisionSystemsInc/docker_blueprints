@@ -36,7 +36,7 @@ services:
     image: vsiri/blueprint:pdal
 
   # Example
-  s2:
+  s2geometry:
     build:
       context: .
       dockerfile: blueprint_s2geometry.Dockerfile
@@ -44,7 +44,7 @@ services:
       #   BASE_IMAGE="${BASE_IMAGE}"
       #   S2GEOMETRY_VERSION="${S2GEOMETRY_VERSION}"
       #   PYTHON_VERSION="${PYTHON_VERSION}"
-    image: vsiri/blueprint:s2
+    image: vsiri/blueprint:s2geometry
 
   # Example
   nglog:
@@ -84,7 +84,7 @@ services:
       dockerfile: blueprint_tinycudann.Dockerfile
       args:
         # BASE_IMAGE: "${BASE_IMAGE}"
-        CUDA_VERSION: "12.9.1"
+        CUDA_VERSION: "12.9.2"
         # PYTHON_VERSION: "${PYTHON_VERSION}"
         # TINYCUDANN_VERSION: "${TINYCUDANN_VERSION}"
         # TCNN_CUDA_ARCHITECTURES: "${TCNN_CUDA_ARCHITECTURES}"
@@ -101,7 +101,7 @@ services:
         # BASE_IMAGE: "${BASE_IMAGE}"
         # BUILD_CUDA_MODULE: ON|OFF
         # CMAKE_CUDA_ARCHITECTURES: 86-real
-        CUDA_VERSION: "12.9.1"
+        CUDA_VERSION: "12.9.2"
         # OPEN3D_VERSION: "${OPEN3D_VERSION}"
         # PYTHON_VERSION: "${PYTHON_VERSION}"
         # VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
@@ -126,7 +126,7 @@ services:
       dockerfile: blueprint_mmcv.Dockerfile
       args:
         # BASE_IMAGE: "${BASE_IMAGE}"
-        CUDA_VERSION: "12.9.1"
+        CUDA_VERSION: "12.9.2"
         # MMCV_VERSION: "${MMCV_VERSION}"
         # PYTHON_VERSION: "${PYTHON_VERSION}"
         # TORCH_CUDA_ARCH_LIST: "${TORCH_CUDA_ARCH_LIST}"
@@ -141,7 +141,7 @@ services:
       dockerfile: blueprint_mtp.Dockerfile
       args:
         # BASE_IMAGE: "${BASE_IMAGE}"
-        CUDA_VERSION: "12.9.1"
+        CUDA_VERSION: "12.9.2"
         # MTP_VERSION: "${MTP_VERSION}"
         # PYTHON_VERSION: "${PYTHON_VERSION}"
         # TORCH_CUDA_ARCH_LIST: "${TORCH_CUDA_ARCH_LIST}"
@@ -168,7 +168,7 @@ services:
       dockerfile: blueprint_sam2.Dockerfile
       args:
         # BASE_IMAGE: "${BASE_IMAGE}"
-        CUDA_VERSION: "12.9.1"
+        CUDA_VERSION: "12.9.2"
         # PYTHON_VERSION: "${PYTHON_VERSION}"
         # SAM2_VERSION: "${MTP_VERSION}"
         # TORCH_CUDA_ARCH_LIST: "${TORCH_CUDA_ARCH_LIST}"

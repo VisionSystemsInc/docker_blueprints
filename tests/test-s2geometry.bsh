@@ -16,7 +16,7 @@ begin_test "s2"
 (
   setup_test
 
-  DOCKER_IMAGE="vsiri/blueprint_test:test_s2"
+  DOCKER_IMAGE="vsiri/blueprint_test:test_s2geometry"
 
   RESULT=$("${DOCKER}" run --rm "${DOCKER_IMAGE}" /venv/bin/python -c "import s2geometry as s2; \
     print(s2.S2CellId(s2.S2LatLng.FromDegrees(51.5001525, -0.1262355)).ToToken())")
