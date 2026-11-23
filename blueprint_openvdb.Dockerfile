@@ -24,22 +24,14 @@ RUN dnf install -y \
         ; \
     rm -rf /var/cache/dnf/*
 
-# oneTBB (system tbb-devel on EL8 is 2018, OpenVDB requires >= 2021)
-# https://github.com/uxlfoundation/oneTBB/tags
-ARG TBB_VERSION="v2022.3.0"
-RUN git clone --depth 1 -b "${TBB_VERSION}" https://github.com/uxlfoundation/oneTBB.git /tmp/tbb; \
-    cmake \
-        -S /tmp/tbb \
-        -B /tmp/tbb/build \
-        -G Ninja \
-        -D CMAKE_BUILD_TYPE=Release \
-        -D CMAKE_INSTALL_PREFIX=/usr/local \
-        -D TBB_TEST=OFF \
-        -D TBB_EXAMPLES=OFF \
-        -D TBB_STRICT=OFF \
-        ; \
-    cmake --build /tmp/tbb/build --target install; \
-    rm -rf /tmp/*
+# tbb (system tbb-devel on EL8 is 2018, OpenVDB requires >= 2021)
+# https://github.com/uxlfoundation/oneTBB/blob/master/INSTALL.md#install-from-release-packages
+ARG TBB_VERSION="2023.1.0"
+RUN URL="https://github.com/uxlfoundation/oneTBB/releases/download/v${TBB_VERSION}/oneapi-tbb-${TBB_VERSION}-lin.tgz"; \
+    curl -fsSL "${URL}" -o /tmp/tbb.tgz; \
+    mkdir -p /tbb; \
+    tar -xvf /tmp/tbb.tgz --strip-components=1 -C /tbb; \
+    rm -rf /tmp/*;
 
 # zstd (system libzstd-devel on EL8 is 1.4.4, OpenVDB>=14 requires >= 1.5.2)
 # https://github.com/facebook/zstd/tags
@@ -113,6 +105,7 @@ RUN source /venv/bin/activate; \
     # cmake options, layered on top of [tool.scikit-build.cmake.define]
     CMAKE_DEFINES=( \
         CMAKE_PREFIX_PATH="/usr/local" \
+        TBB_DIR="/tbb/lib/cmake/tbb" \
         # openvdb's __init__.py & nanovdb's RPATH expect "lib" (not "lib64")
         CMAKE_INSTALL_LIBDIR=lib \
         nanobind_DIR="$(python -m nanobind --cmake_dir)" \
@@ -144,7 +137,7 @@ RUN EXCLUDE=( \
         libcudart.so.* \
     ); \
     mkdir -p /wheelhouse; \
-    export LD_LIBRARY_PATH="/usr/local/lib64:/usr/local/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"; \
+    export LD_LIBRARY_PATH="/tbb/lib/intel64/gcc4.8:/usr/local/lib64:/usr/local/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"; \
     auditwheel repair /wheelhouse-tmp/*.whl -w /wheelhouse \
         $(printf -- '--exclude %s ' "${EXCLUDE[@]}");
 
