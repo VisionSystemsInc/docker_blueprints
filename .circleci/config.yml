@@ -12,6 +12,7 @@ x-references:
           - mmcv
           - mtp
           - open3d
+          - openvdb
           - pymeshlab
           - sam2
           - tinycudann

@@ -175,3 +175,20 @@ services:
         # TORCH_VERSION: "${TORCH_VERSION}"
         # VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
     image: vsiri/blueprint:sam2
+
+  # Example
+  openvdb:
+    build:
+      context: .
+      dockerfile: blueprint_openvdb.Dockerfile
+      args:
+        # BASE_IMAGE: "${BASE_IMAGE}"
+        # CMAKE_CUDA_ARCHITECTURES: "75;86"
+        CUDA_VERSION: "12.9.2"
+        # NANOVDB_USE_CUDA: ON|OFF
+        # OPENVDB_VERSION: "${OPENVDB_VERSION}"
+        # PYTHON_VERSION: "${PYTHON_VERSION}"
+        # TBB_VERSION: "${TBB_VERSION}"
+        # ZSTD_VERSION: "${ZSTD_VERSION}"
+        # VSI_RECIPE_REPO: "${VSI_RECIPE_REPO}"
+    image: vsiri/blueprint:openvdb

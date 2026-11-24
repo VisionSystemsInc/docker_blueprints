@@ -51,6 +51,11 @@ x-args:
     SAM2_VERSION: "2b90b9f5ceec907a1c18123530e92e794ad901a4"
     TORCH_CUDA_ARCH_LIST: "7.0 8.6"
     TORCH_VERSION: &sam2_torch_version "2.9.1+cu129"
+  openvdb: &openvdb_args
+    CUDA_VERSION: "12.9.2"
+    NANOVDB_USE_CUDA: "OFF"
+    OPENVDB_VERSION: "v14.0.0"
+    PYTHON_VERSION: &openvdb_python_version "3.13.12"
 
 services:
 
@@ -142,6 +147,14 @@ services:
       args:
         <<: *sam2_args
     image: &sam2_image vsiri/blueprint_test:sam2
+
+  openvdb:
+    build:
+      context: ..
+      dockerfile: blueprint_openvdb.Dockerfile
+      args:
+        <<: *openvdb_args
+    image: &openvdb_image vsiri/blueprint_test:openvdb
 
   test_gdal:
     build:
@@ -249,3 +262,12 @@ services:
         SAM2_IMAGE: *sam2_image
         TORCH_VERSION: *sam2_torch_version
     image: vsiri/blueprint_test:test_sam2
+
+  test_openvdb:
+    build:
+      context: .
+      dockerfile: test_openvdb.Dockerfile
+      args:
+        OPENVDB_IMAGE: *openvdb_image
+        PYTHON_VERSION: *openvdb_python_version
+    image: vsiri/blueprint_test:test_openvdb

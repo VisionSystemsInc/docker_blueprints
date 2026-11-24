@@ -754,6 +754,85 @@ Build Args ``BASE_IMAGE``                  Base image to build the wheel in. Def
    import torch
    import sam2
 
+OpenVDB & NanoVDB
+-----------------
+
+.. code-block:: yaml
+
+   services:
+
+      openvdb:
+         build:
+            context: "${VSI_COMMON_DIR}/docker/blueprints"
+            dockerfile: blueprint_openvdb.Dockerfile
+            args:
+               # OPENVDB_VERSION: "v14.0.0"
+               # https://github.com/AcademySoftwareFoundation/openvdb/tags
+               # PYTHON_VERSION: "3.13.12"
+               # https://www.python.org/doc/versions/
+               # NANOVDB_USE_CUDA: ON|OFF
+               # CUDA_VERSION: "12.9.2"
+               # https://hub.docker.com/r/nvidia/cuda/tags
+               # CMAKE_CUDA_ARCHITECTURES: "75;86"
+               # https://cmake.org/cmake/help/latest/prop_tgt/CUDA_ARCHITECTURES.html
+               # TBB_VERSION: "2023.1.0"
+               # https://github.com/uxlfoundation/oneTBB/releases
+               # ZSTD_VERSION: "v1.5.7"
+               # https://github.com/facebook/zstd/tags
+               # VSI_RECIPE_REPO: "vsiri/recipe"
+               # https://hub.docker.com/r/vsiri/recipe
+         image: &openvdb_image
+            example/project:openvdb
+
+      example:
+         build:
+            context: .
+            dockerfile: example.Dockerfile
+            args:
+               OPENVDB_IMAGE: *openvdb_image
+         image: example/project:example
+
+========== ============================= ====
+Name       OpenVDB & NanoVDB
+Output dir ``/usr/local``
+Build Args ``BASE_IMAGE``                Base image to build the wheel in. Defaults to ``manylinux_2_28_x86_64``
+..         ``CMAKE_CUDA_ARCHITECTURES``  Build NanoVDB for these CUDA architectures (``NANOVDB_USE_CUDA=ON`` only)
+..         ``CUDA_VERSION``              Build NanoVDB for this CUDA version (``NANOVDB_USE_CUDA=ON`` only)
+..         ``NANOVDB_USE_CUDA``          Build NanoVDB CUDA functionality. Default ``OFF``
+..         ``OPENVDB_VERSION``           OpenVDB version to build from source
+..         ``PYTHON_VERSION``            Build python bindings for this python version (>= 3.11)
+..         ``TBB_VERSION``               oneTBB release package version
+..         ``ZSTD_VERSION``              zstd version to build from source
+..         ``VSI_RECIPE_REPO``           VSI docker recipe repo
+========== ============================= ====
+
+`OpenVDB <https://github.com/AcademySoftwareFoundation/openvdb>`__ is a library for sparse volumetric data, and NanoVDB is its compact, GPU-friendly counterpart. This blueprint builds OpenVDB's upstream ``pyproject.toml``, producing a single ``openvdb`` wheel that contains both the ``openvdb`` and ``nanovdb`` python packages (nanobind bindings). Tested with OpenVDB v14.0.0; v12 and v13 additionally require Blosc, which this blueprint does not install.
+
+A container using a CUDA enabled wheel (``NANOVDB_USE_CUDA=ON``) must have an appropriate CUDA runtime installed, as ``libcudart`` is not bundled in the wheel.
+
+.. code-block:: Dockerfile
+
+   # global arguments
+   ARG OPENVDB_IMAGE
+   FROM ${OPENVDB_IMAGE} AS openvdb
+
+   FROM some_image
+
+   ...
+
+   COPY --from=openvdb /usr/local /usr/local
+
+   RUN pip install /usr/local/share/just/wheels/*
+   # Or using pip-tools, add "--find-links /usr/local/share/just/wheels" to requirements.in
+
+.. code-block:: example.py
+
+   import openvdb
+   import nanovdb
+
+   grid = openvdb.createLevelSetSphere(radius=10.0)
+   handle = nanovdb.tools.openToNanoVDB(grid)
+
 ---------------------
 Blueprint maintenance
 ---------------------
